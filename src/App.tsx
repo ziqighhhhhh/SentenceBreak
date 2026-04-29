@@ -51,6 +51,16 @@ export default function App() {
 
   const totalPages = breakdown ? breakdown.steps.length + 2 : 0;
   const activePage = breakdown ? currentStepIdx + 2 : 0;
+  const summaryFinalSpan = breakdown
+    ? [
+        breakdown.steps.length % 2 === 0 ? 'md:col-span-2' : 'md:col-span-1',
+        breakdown.steps.length % 3 === 0
+          ? 'xl:col-span-3'
+          : breakdown.steps.length % 3 === 1
+            ? 'xl:col-span-2'
+            : 'xl:col-span-1',
+      ].join(' ')
+    : '';
 
   const goToPage = (index: number) => {
     if (!breakdown) return;
@@ -66,7 +76,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <main className={`flex-grow flex flex-col items-center justify-center px-4 ${breakdown ? 'py-12 md:py-20' : 'py-10 md:py-16'}`}>
+      <main className={`flex-grow flex flex-col items-center px-4 ${breakdown ? 'justify-start py-12 pb-28 md:justify-center md:py-20' : 'justify-center py-10 md:py-16'}`}>
         <AnimatePresence mode="wait">
           {!breakdown ? (
             <motion.div 
@@ -230,50 +240,56 @@ export default function App() {
               )}
 
               {isSummary && (
-                <div className="flex flex-col items-center">
+                <div className="flex flex-col items-center w-full">
                   <header className="text-center mb-12">
                     <h1 className="text-5xl font-bold text-zinc-900 mb-4">Sentence Assembly</h1>
-                    <p className="text-xl text-zinc-500 max-w-2xl mx-auto font-medium">Understanding how simple components construct complex meaning.</p>
+                    <p className="text-xl text-zinc-500 max-w-2xl mx-auto font-medium">The complete rebuild path from the base sentence to the final target.</p>
                   </header>
 
-                  <div className="flex flex-col gap-6 relative mb-16 w-full max-w-[640px]">
-                    <div className="absolute left-10 top-12 bottom-12 w-0.5 bg-zinc-200 z-0" />
-                    
-                    <div className="relative z-10 bg-white rounded-2xl p-8 border border-zinc-200 shadow-sm flex items-start gap-6">
-                      <div className="w-16 h-16 rounded-full bg-zinc-50 flex items-center justify-center shrink-0 border border-zinc-100">
-                        <span className="text-xl font-bold text-primary">01</span>
-                      </div>
-                      <div>
-                        <span className="text-[12px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">The Core</span>
-                        <p className="text-xl font-bold text-zinc-900 mb-1">{breakdown.steps[0].english}</p>
-                        <p className="text-zinc-500 font-medium">The fundamental subject-verb-object structure. The absolute minimum required for a complete thought.</p>
-                      </div>
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 relative mb-12 w-full max-w-[1120px]">
 
-                    <div className="relative z-10 bg-white rounded-2xl p-8 border border-zinc-200 shadow-sm flex items-start gap-6">
-                      <div className="w-16 h-16 rounded-full bg-secondary-fixed flex items-center justify-center shrink-0 border border-secondary-fixed">
-                        <span className="text-xl font-bold text-primary">02</span>
-                      </div>
-                      <div>
-                        <span className="text-[12px] font-bold text-primary uppercase tracking-widest block mb-1">The Additions</span>
-                        <p className="text-xl font-bold text-zinc-900 mb-1">+{breakdown.steps.length - 1} Modifier Layers</p>
-                        <p className="text-zinc-500 font-medium">Progressive layers of adjectives, phrases, and clauses adding depth and context.</p>
-                      </div>
-                    </div>
+                    {breakdown.steps.map((step, index) => (
+                      <motion.article
+                        key={`${step.pageNumber}-${index}`}
+                        className="relative z-10 bg-white p-5 md:p-6 border border-zinc-200 flex flex-col gap-4 min-h-[260px]"
+                        initial={{ opacity: 0, y: 24 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: Math.min(index * 0.04, 0.28), duration: 0.36 }}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[12px] font-bold text-primary uppercase tracking-widest">{step.label}</span>
+                          <div className="w-11 h-11 rounded-full bg-zinc-50 flex items-center justify-center shrink-0 border border-zinc-100">
+                            <span className="text-sm font-bold text-primary">{String(index + 1).padStart(2, '0')}</span>
+                          </div>
+                        </div>
+                        <div className="min-w-0 text-left flex flex-col gap-3">
+                          <p className="text-lg font-bold text-zinc-900 leading-snug">{step.english}</p>
+                          <p className="text-sm text-zinc-500 font-medium leading-relaxed">{step.chinese}</p>
+                          <p className="text-sm text-zinc-700 leading-relaxed">{step.explanation}</p>
+                        </div>
+                      </motion.article>
+                    ))}
 
-                    <div className="relative z-10 bg-primary rounded-2xl p-8 shadow-2xl flex items-start gap-6">
-                      <div className="w-16 h-16 rounded-full bg-primary-container flex items-center justify-center shrink-0">
-                        <CheckCircle2 size={32} className="text-white" />
+                    <motion.article
+                      className={`relative z-10 bg-primary p-5 md:p-6 flex flex-col gap-4 min-h-[260px] ${summaryFinalSpan}`}
+                      initial={{ opacity: 0, y: 24 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(breakdown.steps.length * 0.04, 0.32), duration: 0.36 }}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[12px] font-bold text-primary-fixed uppercase tracking-widest">Final Target</span>
+                        <div className="w-11 h-11 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+                          <CheckCircle2 size={26} className="text-white" />
+                        </div>
                       </div>
-                      <div className="text-white">
-                        <span className="text-[12px] font-bold text-primary-fixed uppercase tracking-widest block mb-1">The Full Synthesis</span>
-                        <p className="text-2xl font-bold mb-3 leading-tight">{breakdown.targetSentence}</p>
-                        <p className="opacity-80 font-medium">Modifiers, core structures, and prepositional phrases unite into a singular, vivid narrative image.</p>
+                      <div className="text-white min-w-0 text-left">
+                        <p className="text-2xl md:text-3xl font-bold mb-3 leading-tight">{breakdown.targetSentence}</p>
+                        <p className="opacity-80 font-medium">This is the complete sentence after all rebuild steps.</p>
                       </div>
-                    </div>
+                    </motion.article>
                   </div>
 
-                  <div className="w-full max-w-[640px] bg-zinc-100 rounded-3xl p-12 text-center border border-zinc-200">
+                  <div className="w-full max-w-[760px] bg-zinc-100 p-10 md:p-12 text-center border border-zinc-200">
                     <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
                        <BookOpen size={32} className="text-primary" />
                     </div>
