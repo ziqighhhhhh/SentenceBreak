@@ -1,17 +1,25 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SentenceBreakdown } from "../types";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+interface WebAI2APIChatResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+  error?: {
+    message?: string;
+  };
+}
 
-export async function generateBreakdown(sentence: string): Promise<SentenceBreakdown> {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
-    generationConfig: {
-      responseMimeType: "application/json",
-    },
-  });
+const baseUrl = (process.env.NODE_ENV === "development"
+  ? "/api/webai"
+  : process.env.WEBAI2API_BASE_URL || "http://47.238.156.250:3000"
+).replace(/\/$/, "");
+const apiKey = process.env.WEBAI2API_API_KEY || "";
+const modelName = process.env.WEBAI2API_MODEL || "gemini-2.0-flash";
 
-  const prompt = `
+function buildPrompt(sentence: string): string {
+  return `
     You are an expert English teacher creating Xiaohongshu-style Chinese learning cards for English long-sentence breakdowns.
 
     TARGET SENTENCE:
@@ -93,13 +101,59 @@ export async function generateBreakdown(sentence: string): Promise<SentenceBreak
       "totalWords": number
     }
   `;
+}
+
+function parseBreakdown(content: string): SentenceBreakdown {
+  const trimmed = content.trim();
+  const jsonText = trimmed
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "");
+
+  return JSON.parse(jsonText) as SentenceBreakdown;
+}
+
+export async function generateBreakdown(sentence: string): Promise<SentenceBreakdown> {
+  if (!apiKey) {
+    throw new Error("Missing WEBAI2API_API_KEY. Please configure it in your environment file.");
+  }
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return JSON.parse(response.text());
+    const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: modelName,
+        messages: [
+          {
+            role: "user",
+            content: buildPrompt(sentence),
+          },
+        ],
+        response_format: {
+          type: "json_object",
+        },
+        stream: false,
+      }),
+    });
+
+    const data = (await response.json()) as WebAI2APIChatResponse;
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || `WebAI2API request failed with HTTP ${response.status}`);
+    }
+
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error("WebAI2API response did not include message content.");
+    }
+
+    return parseBreakdown(content);
   } catch (error) {
     console.error("AI Error:", error);
-    throw new Error("Failed to generate breakdown. Please check your API key or input.");
+    throw new Error(error instanceof Error ? error.message : "Failed to generate breakdown.");
   }
 }
