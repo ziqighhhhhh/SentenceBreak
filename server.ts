@@ -14,6 +14,7 @@ const distPath = path.join(__dirname, "dist");
 const rateWindowMs = 60_000;
 const maxRequestsPerWindow = Number(process.env.RATE_LIMIT_PER_MINUTE || 20);
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
+const chineseTextPattern = /[\u3400-\u9FFF\uF900-\uFAFF]/;
 
 if (process.env.TRUST_PROXY) {
   app.set("trust proxy", process.env.TRUST_PROXY);
@@ -83,6 +84,10 @@ function readSentence(body: unknown): string {
     throw new Error("Sentence is too long. Please keep it under 3000 characters.");
   }
 
+  if (chineseTextPattern.test(trimmed)) {
+    throw new Error("Sentence must be written in English and cannot include Chinese text.");
+  }
+
   return trimmed;
 }
 
@@ -93,7 +98,7 @@ app.post("/api/breakdown", rateLimit, async (req: Request, res: Response) => {
     res.json(breakdown);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to generate breakdown.";
-    const status = message.includes("required") || message.includes("string") || message.includes("too long") ? 400 : 502;
+    const status = message.includes("required") || message.includes("string") || message.includes("too long") || message.includes("Chinese text") ? 400 : 502;
     res.status(status).json({ error: message });
   }
 });

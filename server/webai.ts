@@ -66,6 +66,10 @@ export async function generateComplexSentenceOnServer(): Promise<string> {
     .replace(/^["'`]+|["'`]+$/g, "")
     .replace(/\s+/g, " ");
 
+  if (/[\u3400-\u9FFF\uF900-\uFAFF]/.test(sentence)) {
+    throw new Error("AI response included Chinese text in the generated English sentence.");
+  }
+
   if (sentence.length < 80 || sentence.length > 700 || !/[.!?]$/.test(sentence)) {
     throw new Error("AI response did not include a valid complex English sentence.");
   }

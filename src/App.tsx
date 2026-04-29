@@ -1,14 +1,54 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowRight, ArrowLeft, CheckCircle2, BookOpen, Type, Plus } from 'lucide-react';
+import { AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, BookOpen, Type, Plus, RefreshCw } from 'lucide-react';
 import { generateBreakdown, generateComplexSentence } from './services/aiService';
 import { SentenceBreakdown } from './types';
+
+type ErrorAction = 'analyze' | 'generate';
+
+function hasChineseText(value: string): boolean {
+  return /[\u3400-\u9FFF\uF900-\uFAFF]/.test(value);
+}
+
+function getFriendlyErrorMessage(error: unknown, action: ErrorAction): string {
+  const message = error instanceof Error ? error.message : '';
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes('chinese text')) {
+    return '请输入英文句子，不要包含中文。';
+  }
+
+  if (
+    normalized.includes('failed to fetch') ||
+    normalized.includes('network') ||
+    normalized.includes('econnrefused') ||
+    normalized.includes('http 502')
+  ) {
+    return '无法连接分析服务，请稍后重试。';
+  }
+
+  if (
+    normalized.includes('token') ||
+    normalized.includes('api_key') ||
+    normalized.includes('unauthorized') ||
+    normalized.includes('401')
+  ) {
+    return '服务暂时不可用，请检查服务器配置。';
+  }
+
+  if (action === 'generate') {
+    return '句子生成失败，请重试。';
+  }
+
+  return '句子分析失败，请重试。';
+}
 
 export default function App() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatingSentence, setGeneratingSentence] = useState(false);
   const [inputHint, setInputHint] = useState('');
+  const [errorNotice, setErrorNotice] = useState<{ message: string; action: ErrorAction } | null>(null);
   const [breakdown, setBreakdown] = useState<SentenceBreakdown | null>(null);
   const [currentStepIdx, setCurrentStepIdx] = useState(-1); // -1 is the "Page 1" (Target + Garbage)
   const [slideDirection, setSlideDirection] = useState(1);
@@ -16,6 +56,13 @@ export default function App() {
   const handleAnalyze = async () => {
     if (!input.trim()) return;
     setInputHint('');
+    setErrorNotice(null);
+
+    if (hasChineseText(input)) {
+      setErrorNotice({ message: '请输入英文句子，不要包含中文。', action: 'analyze' });
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await generateBreakdown(input);
@@ -23,7 +70,7 @@ export default function App() {
       setSlideDirection(1);
       setCurrentStepIdx(-1);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error generating breakdown');
+      setErrorNotice({ message: getFriendlyErrorMessage(err, 'analyze'), action: 'analyze' });
     } finally {
       setLoading(false);
     }
@@ -38,13 +85,14 @@ export default function App() {
 
   const handleGenerateSentence = async () => {
     setInputHint('');
+    setErrorNotice(null);
     setGeneratingSentence(true);
     try {
       const sentence = await generateComplexSentence();
       setInput(sentence);
       setInputHint('Example generated. Review it, then click Analyze.');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error generating sentence');
+      setErrorNotice({ message: getFriendlyErrorMessage(err, 'generate'), action: 'generate' });
     } finally {
       setGeneratingSentence(false);
     }
@@ -108,12 +156,16 @@ export default function App() {
               <h1 className="text-6xl font-bold tracking-tight mb-4">What shall we analyze today?</h1>
               <p className="text-xl text-ink-muted mb-12">Paste your sentence below to begin the analysis process.</p>
               
-              <div className="glass-card p-12 text-left mb-8">
+              <div className="glass-card p-12 text-left mb-8 transition-all focus-within:border-primary/20 focus-within:shadow-[0_0_0_4px_rgba(0,78,159,0.08)]">
                 <textarea
                   value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    setInputHint('');
+                    setErrorNotice(null);
+                  }}
                   placeholder="Enter a complex English sentence here..."
-                  className="w-full h-64 bg-transparent border-none focus:ring-0 text-2xl text-ink placeholder:text-zinc-300 resize-none font-medium leading-normal"
+                  className="w-full h-64 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-2xl text-ink placeholder:text-zinc-300 resize-none font-medium leading-normal"
                   id="sentence-input"
                 />
               </div>
@@ -127,6 +179,28 @@ export default function App() {
                 >
                   {inputHint}
                 </motion.p>
+              )}
+
+              {errorNotice && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 flex flex-col items-start justify-between gap-4 rounded-2xl border border-red-100 bg-red-50 px-5 py-4 text-left text-red-900 sm:flex-row sm:items-center"
+                  role="alert"
+                >
+                  <div className="flex items-start gap-3">
+                    <AlertCircle size={20} className="mt-0.5 shrink-0 text-red-600" />
+                    <p className="text-sm font-semibold leading-relaxed">{errorNotice.message}</p>
+                  </div>
+                  <button
+                    onClick={errorNotice.action === 'generate' ? handleGenerateSentence : handleAnalyze}
+                    disabled={loading || generatingSentence || (errorNotice.action === 'analyze' && !input.trim())}
+                    className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-red-700 ring-1 ring-red-100 transition-all hover:bg-red-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <RefreshCw size={15} />
+                    Retry
+                  </button>
+                </motion.div>
               )}
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
