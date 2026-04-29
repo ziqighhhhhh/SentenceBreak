@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, BookOpen, Type, Plus, RefreshCw } from 'lucide-react';
+import { AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, BookOpen, Type, Plus, RefreshCw, Loader2 } from 'lucide-react';
 import { generateBreakdown, generateComplexSentence } from './services/aiService';
 import { SentenceBreakdown } from './types';
 
@@ -47,11 +47,28 @@ export default function App() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatingSentence, setGeneratingSentence] = useState(false);
+  const [showSlowMessage, setShowSlowMessage] = useState(false);
   const [inputHint, setInputHint] = useState('');
   const [errorNotice, setErrorNotice] = useState<{ message: string; action: ErrorAction } | null>(null);
   const [breakdown, setBreakdown] = useState<SentenceBreakdown | null>(null);
   const [currentStepIdx, setCurrentStepIdx] = useState(-1); // -1 is the "Page 1" (Target + Garbage)
   const [slideDirection, setSlideDirection] = useState(1);
+  const isBusy = loading || generatingSentence;
+
+  useEffect(() => {
+    if (!isBusy) {
+      setShowSlowMessage(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowSlowMessage(true);
+    }, 8000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isBusy]);
   
   const handleAnalyze = async () => {
     if (!input.trim()) return;
@@ -155,6 +172,24 @@ export default function App() {
             >
               <h1 className="text-6xl font-bold tracking-tight mb-4">What shall we analyze today?</h1>
               <p className="text-xl text-ink-muted mb-12">Paste your sentence below to begin the analysis process.</p>
+
+              {generatingSentence && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 mx-auto flex max-w-xl items-center justify-center gap-3 rounded-2xl bg-white px-5 py-4 text-primary ring-1 ring-primary/10"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <Loader2 size={20} className="animate-spin" />
+                  <div className="text-left">
+                    <p className="text-sm font-bold">Generating an example sentence...</p>
+                    {showSlowMessage && (
+                      <p className="mt-1 text-xs font-semibold text-ink-muted">This may take a little longer for complex sentences.</p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
               
               <div className="glass-card p-12 text-left mb-8 transition-all focus-within:border-primary/20 focus-within:shadow-[0_0_0_4px_rgba(0,78,159,0.08)]">
                 <textarea
@@ -169,6 +204,24 @@ export default function App() {
                   id="sentence-input"
                 />
               </div>
+
+              {loading && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 mx-auto flex max-w-xl items-center justify-center gap-3 rounded-2xl bg-primary px-6 py-5 text-white shadow-lg"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <Loader2 size={22} className="animate-spin" />
+                  <div className="text-left">
+                    <p className="text-base font-bold">Breaking down the sentence step by step...</p>
+                    {showSlowMessage && (
+                      <p className="mt-1 text-sm font-medium text-white/80">This may take a little longer for complex sentences.</p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
 
               {inputHint && (
                 <motion.p
@@ -206,19 +259,20 @@ export default function App() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <button
                   onClick={handleAnalyze}
-                  disabled={loading || !input.trim()}
+                  disabled={isBusy || !input.trim()}
                   className="bg-primary text-white px-10 py-4 rounded-full text-lg font-medium shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   id="analyze-btn"
                 >
                   {loading && !generatingSentence ? 'Analyzing...' : 'Analyze this sentence'}
-                  {!loading && <ArrowRight size={20} />}
+                  {loading ? <Loader2 size={20} className="animate-spin" /> : <ArrowRight size={20} />}
                 </button>
                 <button
                   onClick={handleGenerateSentence}
-                  disabled={loading}
-                  className="text-primary px-6 py-3 rounded-full text-base font-medium hover:bg-primary/5 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isBusy}
+                  className="inline-flex items-center gap-2 text-primary px-6 py-3 rounded-full text-base font-medium hover:bg-primary/5 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {generatingSentence ? 'Generating...' : 'Generate an example'}
+                  {generatingSentence && <Loader2 size={17} className="animate-spin" />}
                 </button>
               </div>
             </motion.div>
