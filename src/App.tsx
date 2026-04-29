@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, BookOpen, Type, Plus, RefreshCw, Loader2 } from 'lucide-react';
+import { AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, BookOpen, Type, Plus, RefreshCw, Loader2, ChevronDown } from 'lucide-react';
 import { generateBreakdown, generateComplexSentence } from './services/aiService';
 import { SentenceBreakdown } from './types';
 
@@ -50,6 +50,7 @@ export default function App() {
   const [showSlowMessage, setShowSlowMessage] = useState(false);
   const [inputHint, setInputHint] = useState('');
   const [errorNotice, setErrorNotice] = useState<{ message: string; action: ErrorAction } | null>(null);
+  const [expandedSummarySteps, setExpandedSummarySteps] = useState<ReadonlySet<number>>(new Set());
   const [breakdown, setBreakdown] = useState<SentenceBreakdown | null>(null);
   const [currentStepIdx, setCurrentStepIdx] = useState(-1); // -1 is the "Page 1" (Target + Garbage)
   const [slideDirection, setSlideDirection] = useState(1);
@@ -85,6 +86,7 @@ export default function App() {
     try {
       const data = await generateBreakdown(input);
       setBreakdown(data);
+      setExpandedSummarySteps(new Set());
       setSlideDirection(1);
       setCurrentStepIdx(-1);
     } catch (err) {
@@ -134,6 +136,7 @@ export default function App() {
   const reset = () => {
     setBreakdown(null);
     setInput('');
+    setExpandedSummarySteps(new Set());
     setInputHint('');
     setErrorNotice(null);
     setSlideDirection(-1);
@@ -222,6 +225,20 @@ export default function App() {
     setCurrentStepIdx(nextStepIdx);
   };
 
+  const toggleSummaryStep = (index: number) => {
+    setExpandedSummarySteps((current) => {
+      const next = new Set(current);
+
+      if (next.has(index)) {
+        next.delete(index);
+        return next;
+      }
+
+      next.add(index);
+      return next;
+    });
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <main className={`flex-grow flex flex-col items-center px-4 ${breakdown ? 'justify-start py-12 pb-28 md:justify-center md:py-20' : 'justify-center py-10 md:py-16'}`}>
@@ -234,7 +251,7 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
               className="max-w-4xl w-full text-center"
             >
-              <h1 className="text-6xl font-bold tracking-tight mb-4">Break down a complex English sentence</h1>
+              <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">Break down a complex English sentence</h1>
               <p className="text-xl text-ink-muted mb-12">Paste a sentence or generate an example, then rebuild it step by step.</p>
 
               {generatingSentence && (
@@ -267,7 +284,7 @@ export default function App() {
                     setErrorNotice(null);
                   }}
                   placeholder="Enter a complex English sentence here..."
-                  className="w-full h-64 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-2xl text-ink placeholder:text-zinc-300 resize-none font-medium leading-normal"
+                  className="w-full h-44 md:h-64 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-2xl text-ink placeholder:text-zinc-300 resize-none font-medium leading-normal"
                   id="sentence-input"
                 />
               </div>
@@ -417,7 +434,7 @@ export default function App() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ delay: 0.2, duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
                   >
-                    <p className="text-4xl md:text-5xl font-bold text-zinc-900 leading-tight tracking-tight">{breakdown.targetSentence}</p>
+                    <p className="text-3xl md:text-5xl font-bold text-zinc-900 leading-tight tracking-tight">{breakdown.targetSentence}</p>
                   </motion.div>
 
                   <motion.div
@@ -459,7 +476,7 @@ export default function App() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       transition={{ delay: 0.18, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                     >
-                      <h3 className="text-4xl md:text-5xl font-bold leading-tight tracking-tight mb-4 text-zinc-900">
+                      <h3 className="text-3xl md:text-5xl font-bold leading-tight tracking-tight mb-4 text-zinc-900">
                         {breakdown.steps[currentStepIdx].english}
                       </h3>
                       <p className="text-xl font-medium text-ink-muted">{breakdown.steps[currentStepIdx].chinese}</p>
@@ -486,7 +503,7 @@ export default function App() {
               {isSummary && (
                 <div className="flex flex-col items-center w-full">
                   <header className="text-center mb-12">
-                    <h1 className="text-5xl font-bold text-zinc-900 mb-4">Sentence Assembly</h1>
+                    <h1 className="text-4xl md:text-5xl font-bold text-zinc-900 mb-4">Sentence Assembly</h1>
                     <p className="text-xl text-zinc-500 max-w-2xl mx-auto font-medium">The complete rebuild path from the base sentence to the final target.</p>
                   </header>
 
@@ -509,7 +526,31 @@ export default function App() {
                         <div className="min-w-0 text-left flex flex-col gap-3">
                           <p className="text-lg font-bold text-zinc-900 leading-snug">{step.english}</p>
                           <p className="text-sm text-zinc-500 font-medium leading-relaxed">{step.chinese}</p>
-                          <p className="text-sm text-zinc-700 leading-relaxed">{step.explanation}</p>
+                          <button
+                            onClick={() => {
+                              toggleSummaryStep(index);
+                            }}
+                            aria-expanded={expandedSummarySteps.has(index)}
+                            className="mt-1 inline-flex w-fit items-center gap-1 rounded-full text-sm font-bold text-primary transition-all hover:text-primary-container focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          >
+                            Why this step matters
+                            <ChevronDown
+                              size={15}
+                              className={`transition-transform ${expandedSummarySteps.has(index) ? 'rotate-180' : ''}`}
+                            />
+                          </button>
+                          <AnimatePresence initial={false}>
+                            {expandedSummarySteps.has(index) && (
+                              <motion.p
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden text-sm text-zinc-700 leading-relaxed"
+                              >
+                                {step.explanation}
+                              </motion.p>
+                            )}
+                          </AnimatePresence>
                         </div>
                       </motion.article>
                     ))}
