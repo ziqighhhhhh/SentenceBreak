@@ -170,7 +170,7 @@ export default function App() {
                     <span className="text-ink-muted text-xl font-semibold mb-2 block tracking-tight uppercase">{breakdown.sourceLabel}</span>
                   </div>
                   
-                  <h2 className="text-primary text-xl font-semibold mb-6">先看完整长难句</h2>
+                  <h2 className="text-primary text-xl font-semibold mb-6">Read the full sentence first</h2>
                   
                   <div className="glass-card relative w-full max-w-3xl border border-zinc-200 bg-white/50 backdrop-blur-md p-16 mb-12 overflow-hidden text-center">
                     <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary opacity-5 blur-[80px] rounded-full" />
@@ -179,7 +179,7 @@ export default function App() {
                   </div>
 
                   <div className="flex flex-col items-center gap-6 w-full max-w-3xl">
-                    <h2 className="text-primary text-xl font-semibold">再从基础句开始拆解</h2>
+                    <h2 className="text-primary text-xl font-semibold">Then start from the base sentence</h2>
                     <div className="w-full bg-zinc-100/50 rounded-2xl border border-zinc-200 p-8 text-center">
                       <p className="text-3xl font-bold text-zinc-900 leading-tight tracking-tight mb-4">{breakdown.steps[0].english}</p>
                       <p className="text-lg text-ink-muted leading-relaxed font-medium">{breakdown.steps[0].chinese}</p>
@@ -192,17 +192,12 @@ export default function App() {
                 <div className="flex flex-col items-center">
                   <div className="glass-card relative w-full max-w-4xl border border-zinc-200 bg-[#f5f5f7] p-16 overflow-hidden">
                     <div className="text-center">
-                      <p className="text-zinc-500 font-bold mb-1">当你能看懂上一页</p>
-                      <p className="text-xl font-bold text-zinc-900 mb-12">那你就能看懂</p>
+                      <p className="text-zinc-500 font-bold mb-1">Once the previous page is clear</p>
+                      <p className="text-xl font-bold text-zinc-900 mb-12">you can understand this one</p>
                     </div>
 
                     <div className="mb-12 text-center">
                       <h3 className="text-4xl md:text-5xl font-bold text-zinc-900 leading-tight tracking-tight mb-4">
-                        {breakdown.steps[currentStepIdx].english.split('(').map((part, i) => {
-                          if (i === 0) return part;
-                          return <span key={i} className="bg-primary-fixed/40 text-primary px-2 py-0.5 rounded-lg">({part}</span>;
-                        })}
-                        {/* Note: Simplified highlighting logic above, for AI generated text it might vary */}
                         {breakdown.steps[currentStepIdx].english}
                       </h3>
                       <p className="text-xl text-ink-muted font-medium">{breakdown.steps[currentStepIdx].chinese}</p>
@@ -278,11 +273,11 @@ export default function App() {
                     <div className="flex flex-wrap justify-center gap-4 mb-10">
                       <div className="bg-white px-6 py-2.5 rounded-full border border-zinc-200 text-sm font-bold text-zinc-800 shadow-sm flex items-center gap-2">
                         <BookOpen size={16} className="text-primary" />
-                        本节读完 <strong className="text-primary">{breakdown.steps.length}</strong> 个递进句
+                        Steps completed <strong className="text-primary">{breakdown.steps.length}</strong>
                       </div>
                       <div className="bg-white px-6 py-2.5 rounded-full border border-zinc-200 text-sm font-bold text-zinc-800 shadow-sm flex items-center gap-2">
                         <Type size={16} className="text-primary" />
-                        累计词汇 <strong className="text-primary">{breakdown.totalWords}</strong> words
+                        Total words <strong className="text-primary">{breakdown.totalWords}</strong>
                       </div>
                     </div>
 
