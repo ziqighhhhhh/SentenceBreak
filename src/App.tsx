@@ -54,6 +54,7 @@ export default function App() {
   const [currentStepIdx, setCurrentStepIdx] = useState(-1); // -1 is the "Page 1" (Target + Garbage)
   const [slideDirection, setSlideDirection] = useState(1);
   const isBusy = loading || generatingSentence;
+  const isSummary = breakdown && currentStepIdx === breakdown.steps.length;
 
   useEffect(() => {
     if (!isBusy) {
@@ -122,6 +123,14 @@ export default function App() {
     }
   };
 
+  const returnToEdit = () => {
+    setBreakdown(null);
+    setInputHint('');
+    setErrorNotice(null);
+    setSlideDirection(-1);
+    setCurrentStepIdx(-1);
+  };
+
   const reset = () => {
     setBreakdown(null);
     setInput('');
@@ -131,7 +140,53 @@ export default function App() {
     setCurrentStepIdx(-1);
   };
 
-  const isSummary = breakdown && currentStepIdx === breakdown.steps.length;
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        if (!breakdown && input.trim() && !isBusy) {
+          event.preventDefault();
+          void handleAnalyze();
+        }
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        if (errorNotice) {
+          event.preventDefault();
+          setErrorNotice(null);
+          return;
+        }
+
+        if (breakdown) {
+          event.preventDefault();
+          returnToEdit();
+        }
+        return;
+      }
+
+      if (!breakdown) return;
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        prevStep();
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        if (isSummary) {
+          reset();
+          return;
+        }
+        nextStep();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [breakdown, currentStepIdx, errorNotice, input, isBusy, isSummary]);
 
   const totalPages = breakdown ? breakdown.steps.length + 2 : 0;
   const activePage = breakdown ? currentStepIdx + 2 : 0;
@@ -201,6 +256,9 @@ export default function App() {
               )}
               
               <div className="glass-card p-12 text-left mb-8 transition-all focus-within:border-primary/20 focus-within:shadow-[0_0_0_4px_rgba(0,78,159,0.08)]">
+                <label htmlFor="sentence-input" className="mb-4 block text-sm font-bold uppercase tracking-[0.16em] text-ink-muted">
+                  English sentence
+                </label>
                 <textarea
                   value={input}
                   onChange={(e) => {
@@ -294,18 +352,24 @@ export default function App() {
               transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
               className="relative w-full max-w-[min(1440px,calc(100vw-48px))]"
             >
-              <div className="mb-8 flex items-center justify-center gap-2">
+              <div className="mb-8 flex flex-wrap items-center justify-center gap-1" aria-label="Breakdown progress">
                 {Array.from({ length: totalPages }).map((_, index) => (
                   <button
                     key={index}
                     aria-label={`Go to page ${index + 1}`}
+                    aria-current={index + 1 === activePage ? 'step' : undefined}
+                    aria-disabled={index + 1 === activePage}
                     onClick={() => {
                       goToPage(index);
                     }}
-                    className={`h-1.5 rounded-full transition-all duration-500 ${
-                      index + 1 === activePage ? 'w-10 bg-primary' : 'w-1.5 bg-zinc-300 hover:bg-zinc-500'
-                    }`}
-                  />
+                    className="flex h-11 w-11 items-center justify-center rounded-full transition-all hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  >
+                    <span
+                      className={`h-1.5 rounded-full transition-all duration-500 ${
+                        index + 1 === activePage ? 'w-10 bg-primary' : 'w-1.5 bg-zinc-300'
+                      }`}
+                    />
+                  </button>
                 ))}
               </div>
 
