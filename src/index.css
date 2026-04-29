@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-primary: #004e9f;
+  --color-primary-container: #0066cc;
+  --color-primary-fixed: #d7e3ff;
+  --color-on-primary-container: #dfe8ff;
+  --color-canvas-white: #ffffff;
+  --color-canvas-parchment: #f5f5f7;
+  --color-ink: #1d1d1f;
+  --color-ink-muted: #7a7a7a;
+  --color-ink-muted-80: #333333;
+  --color-hairline: #e0e0e0;
+  --color-focus-blue: #0071e3;
+  --color-secondary-fixed: #d3e3ff;
+}
+
+@layer base {
+  body {
+    @apply bg-[#f9f9ff] text-ink font-sans antialiased;
+  }
+}
+
+.glass-card {
+  @apply bg-[#f5f5f7] border border-[#e0e0e0] shadow-[3px_5px_30px_rgba(0,0,0,0.12)] rounded-[24px];
+}
