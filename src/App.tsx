@@ -8,12 +8,14 @@ export default function App() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatingSentence, setGeneratingSentence] = useState(false);
+  const [inputHint, setInputHint] = useState('');
   const [breakdown, setBreakdown] = useState<SentenceBreakdown | null>(null);
   const [currentStepIdx, setCurrentStepIdx] = useState(-1); // -1 is the "Page 1" (Target + Garbage)
   const [slideDirection, setSlideDirection] = useState(1);
   
   const handleAnalyze = async () => {
     if (!input.trim()) return;
+    setInputHint('');
     setLoading(true);
     try {
       const data = await generateBreakdown(input);
@@ -35,10 +37,12 @@ export default function App() {
   };
 
   const handleGenerateSentence = async () => {
+    setInputHint('');
     setGeneratingSentence(true);
     try {
       const sentence = await generateComplexSentence();
       setInput(sentence);
+      setInputHint('Example generated. Review it, then click Analyze.');
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error generating sentence');
     } finally {
@@ -114,6 +118,17 @@ export default function App() {
                 />
               </div>
 
+              {inputHint && (
+                <motion.p
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 text-center text-sm font-semibold text-primary"
+                  role="status"
+                >
+                  {inputHint}
+                </motion.p>
+              )}
+
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <button
                   onClick={handleAnalyze}
@@ -121,15 +136,15 @@ export default function App() {
                   className="bg-primary text-white px-10 py-4 rounded-full text-lg font-medium shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   id="analyze-btn"
                 >
-                  {loading && !generatingSentence ? 'Analyzing...' : 'Analyze Sentence'}
+                  {loading && !generatingSentence ? 'Analyzing...' : 'Analyze this sentence'}
                   {!loading && <ArrowRight size={20} />}
                 </button>
                 <button
                   onClick={handleGenerateSentence}
                   disabled={loading}
-                  className="border border-primary text-primary px-10 py-4 rounded-full text-lg font-medium hover:bg-primary/5 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-primary px-6 py-3 rounded-full text-base font-medium hover:bg-primary/5 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {generatingSentence ? 'Generating...' : 'Generate Sentence'}
+                  {generatingSentence ? 'Generating...' : 'Generate an example'}
                 </button>
               </div>
             </motion.div>
@@ -140,7 +155,7 @@ export default function App() {
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: slideDirection * -180, scale: 0.98 }}
               transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-              className="relative max-w-[980px] w-full"
+              className="relative w-full max-w-[min(1440px,calc(100vw-48px))]"
             >
               <div className="mb-8 flex items-center justify-center gap-2">
                 {Array.from({ length: totalPages }).map((_, index) => (
@@ -192,7 +207,7 @@ export default function App() {
                   <h2 className="text-primary text-xl font-semibold mb-6">Read the full sentence first</h2>
                   
                   <motion.div
-                    className="relative w-full max-w-3xl bg-white p-16 mb-12 overflow-hidden text-center"
+                    className="relative w-full max-w-6xl bg-white p-10 md:p-16 mb-12 overflow-hidden text-center"
                     initial={{ opacity: 0, y: 28, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ delay: 0.2, duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
@@ -201,7 +216,7 @@ export default function App() {
                   </motion.div>
 
                   <motion.div
-                    className="flex flex-col items-center gap-6 w-full max-w-3xl"
+                    className="flex flex-col items-center gap-6 w-full max-w-6xl"
                     initial={{ opacity: 0, y: 22 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.32, duration: 0.45 }}
@@ -218,7 +233,7 @@ export default function App() {
               {currentStepIdx >= 0 && currentStepIdx < breakdown.steps.length && (
                 <div className="flex flex-col items-center">
                   <motion.div
-                    className="relative w-full max-w-4xl bg-[#f5f5f7] p-12 md:p-20 overflow-hidden text-center"
+                    className="relative w-full max-w-6xl bg-[#f5f5f7] p-10 md:p-16 xl:p-20 overflow-hidden text-center"
                     initial={{ backgroundColor: '#ffffff' }}
                     animate={{ backgroundColor: '#f5f5f7' }}
                     transition={{ duration: 0.5 }}
@@ -270,7 +285,7 @@ export default function App() {
                     <p className="text-xl text-zinc-500 max-w-2xl mx-auto font-medium">The complete rebuild path from the base sentence to the final target.</p>
                   </header>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 relative mb-12 w-full max-w-[1120px]">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 relative mb-12 w-full max-w-[1320px]">
 
                     {summarySteps.map((step, index) => (
                       <motion.article
