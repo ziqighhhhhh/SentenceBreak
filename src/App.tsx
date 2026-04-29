@@ -1,20 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Search, 
-  ArrowRight, 
-  ArrowLeft, 
-  CheckCircle2, 
-  ExternalLink, 
-  BookOpen, 
-  Type, 
-  HelpCircle, 
-  Settings,
-  Plus,
-  CircleUser
-} from 'lucide-react';
+import { ArrowRight, ArrowLeft, CheckCircle2, BookOpen, Type, Plus } from 'lucide-react';
 import { generateBreakdown } from './services/aiService';
-import { SentenceBreakdown, BreakdownStep } from './types';
+import { SentenceBreakdown } from './types';
 
 export default function App() {
   const [input, setInput] = useState('');
@@ -56,74 +44,12 @@ export default function App() {
 
   const isSummary = breakdown && currentStepIdx === breakdown.steps.length;
 
+  const totalPages = breakdown ? breakdown.steps.length + 2 : 0;
+  const activePage = breakdown ? currentStepIdx + 2 : 0;
+
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Global Header */}
-      <header className="bg-black text-white h-11 flex items-center justify-between px-6 fixed top-0 w-full z-50">
-        <div className="flex items-center gap-6">
-          <span className="text-sm font-bold tracking-widest uppercase">Linguist Pro</span>
-          <nav className="hidden md:flex gap-6 text-[12px] font-medium text-zinc-400">
-            <button className="hover:text-white transition-colors">Curriculum</button>
-            <button className="hover:text-white transition-colors">Library</button>
-            <button className="text-white">Practice</button>
-            <button className="hover:text-white transition-colors">Analysis</button>
-          </nav>
-        </div>
-        <div className="flex items-center gap-4">
-          <HelpCircle size={18} className="text-zinc-400 cursor-pointer hover:text-white" />
-          <Settings size={18} className="text-zinc-400 cursor-pointer hover:text-white" />
-          <div className="w-6 h-6 rounded-full bg-zinc-700 flex items-center justify-center">
-             <CircleUser size={20} className="text-zinc-400" />
-          </div>
-        </div>
-      </header>
-
-      {/* Sub Header / Breadcrumbs */}
-      {breakdown && (
-        <nav className="bg-white/80 backdrop-blur-xl border-b border-zinc-200 h-14 flex items-center justify-between px-8 fixed top-11 w-full z-40">
-          <div className="flex items-center gap-8">
-            <span className="text-base font-medium text-zinc-900">Sentence Breakdown</span>
-            <div className="hidden md:flex gap-6 h-full items-center text-[13px] font-medium uppercase tracking-widest text-zinc-400">
-              <span className={`${currentStepIdx === -1 ? 'text-primary border-b-2 border-primary' : ''} pb-1 cursor-pointer transition-colors`} onClick={() => setCurrentStepIdx(-1)}>Step 1</span>
-              {breakdown.steps.slice(1).map((_, i) => (
-                <span 
-                  key={i} 
-                  className={`${currentStepIdx === i + 1 ? 'text-primary border-b-2 border-primary' : ''} pb-1 cursor-pointer transition-colors`}
-                  onClick={() => setCurrentStepIdx(i + 1)}
-                >
-                  Step {i + 2}
-                </span>
-              ))}
-              <span 
-                className={`${isSummary ? 'text-primary border-b-2 border-primary' : ''} pb-1 cursor-pointer transition-colors`}
-                onClick={() => setCurrentStepIdx(breakdown.steps.length)}
-              >
-                Summary
-              </span>
-            </div>
-          </div>
-          <div>
-            {!isSummary ? (
-              <button 
-                onClick={nextStep}
-                className="bg-black text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:opacity-80 active:scale-95 transition-all"
-              >
-                Next
-              </button>
-            ) : (
-              <button 
-                onClick={reset}
-                className="bg-black text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:opacity-80 active:scale-95 transition-all"
-              >
-                New Scan
-              </button>
-            )}
-          </div>
-        </nav>
-      )}
-
-      {/* Main Content */}
-      <main className={`flex-grow flex flex-col items-center justify-center px-4 ${breakdown ? 'pt-28 pb-12' : 'pt-11'}`}>
+      <main className={`flex-grow flex flex-col items-center justify-center px-4 ${breakdown ? 'py-12 md:py-20' : 'py-10 md:py-16'}`}>
         <AnimatePresence mode="wait">
           {!breakdown ? (
             <motion.div 
@@ -159,60 +85,133 @@ export default function App() {
           ) : (
             <motion.div 
               key={`step-${currentStepIdx}`}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="max-w-[980px] w-full"
+              initial={{ opacity: 0, y: 42, scale: 0.96, filter: 'blur(14px)' }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: -28, scale: 1.03, filter: 'blur(10px)' }}
+              transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
+              className="relative max-w-[980px] w-full"
             >
+              <div className="mb-8 flex items-center justify-center gap-2">
+                {Array.from({ length: totalPages }).map((_, index) => (
+                  <button
+                    key={index}
+                    aria-label={`Go to page ${index + 1}`}
+                    onClick={() => {
+                      if (!breakdown) return;
+                      if (index === 0) setCurrentStepIdx(-1);
+                      else if (index === totalPages - 1) setCurrentStepIdx(breakdown.steps.length);
+                      else setCurrentStepIdx(index - 1);
+                    }}
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      index + 1 === activePage ? 'w-10 bg-primary' : 'w-1.5 bg-zinc-300 hover:bg-zinc-500'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={prevStep}
+                disabled={currentStepIdx === -1}
+                className="hidden md:flex absolute left-[-72px] top-1/2 z-20 h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-zinc-900 ring-1 ring-black/5 backdrop-blur-xl transition-all hover:bg-white active:scale-95 disabled:opacity-20"
+                aria-label="Previous card"
+              >
+                <ArrowLeft size={20} />
+              </button>
+
+              <button
+                onClick={isSummary ? reset : nextStep}
+                className="hidden md:flex absolute right-[-72px] top-1/2 z-20 h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-white transition-all hover:brightness-110 active:scale-95"
+                aria-label={isSummary ? 'Start over' : 'Next card'}
+              >
+                <ArrowRight size={20} />
+              </button>
+
               {currentStepIdx === -1 && (
-                <div className="flex flex-col items-center">
-                  <div className="text-center mb-12">
+                <motion.div
+                  className="flex flex-col items-center"
+                  initial={{ backgroundColor: '#ffffff' }}
+                  animate={{ backgroundColor: '#ffffff' }}
+                >
+                  <motion.div
+                    className="text-center mb-12"
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.12, duration: 0.45 }}
+                  >
                     <span className="text-ink-muted text-xl font-semibold mb-2 block tracking-tight uppercase">{breakdown.sourceLabel}</span>
-                  </div>
+                  </motion.div>
                   
                   <h2 className="text-primary text-xl font-semibold mb-6">Read the full sentence first</h2>
                   
-                  <div className="glass-card relative w-full max-w-3xl border border-zinc-200 bg-white/50 backdrop-blur-md p-16 mb-12 overflow-hidden text-center">
-                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary opacity-5 blur-[80px] rounded-full" />
-                    <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-focus-blue opacity-5 blur-[80px] rounded-full" />
+                  <motion.div
+                    className="relative w-full max-w-3xl bg-white p-16 mb-12 overflow-hidden text-center"
+                    initial={{ opacity: 0, y: 28, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: 0.2, duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
+                  >
                     <p className="text-4xl md:text-5xl font-bold text-zinc-900 leading-tight tracking-tight">{breakdown.targetSentence}</p>
-                  </div>
+                  </motion.div>
 
-                  <div className="flex flex-col items-center gap-6 w-full max-w-3xl">
+                  <motion.div
+                    className="flex flex-col items-center gap-6 w-full max-w-3xl"
+                    initial={{ opacity: 0, y: 22 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.32, duration: 0.45 }}
+                  >
                     <h2 className="text-primary text-xl font-semibold">Then start from the base sentence</h2>
-                    <div className="w-full bg-zinc-100/50 rounded-2xl border border-zinc-200 p-8 text-center">
+                    <div className="w-full bg-[#f5f5f7] p-8 text-center">
                       <p className="text-3xl font-bold text-zinc-900 leading-tight tracking-tight mb-4">{breakdown.steps[0].english}</p>
                       <p className="text-lg text-ink-muted leading-relaxed font-medium">{breakdown.steps[0].chinese}</p>
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                </motion.div>
               )}
 
               {currentStepIdx >= 0 && currentStepIdx < breakdown.steps.length && (
                 <div className="flex flex-col items-center">
-                  <div className="glass-card relative w-full max-w-4xl border border-zinc-200 bg-[#f5f5f7] p-16 overflow-hidden">
-                    <div className="text-center">
+                  <motion.div
+                    className="relative w-full max-w-4xl bg-[#f5f5f7] p-12 md:p-20 overflow-hidden text-center"
+                    initial={{ backgroundColor: '#ffffff' }}
+                    animate={{ backgroundColor: currentStepIdx % 2 === 0 ? '#f5f5f7' : '#272729' }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <motion.div
+                      className={`${currentStepIdx % 2 === 0 ? 'text-zinc-900' : 'text-white'}`}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.08, duration: 0.42 }}
+                    >
                       <p className="text-zinc-500 font-bold mb-1">Once the previous page is clear</p>
-                      <p className="text-xl font-bold text-zinc-900 mb-12">you can understand this one</p>
-                    </div>
+                      <p className="text-xl font-bold mb-12">you can understand this one</p>
+                    </motion.div>
 
-                    <div className="mb-12 text-center">
-                      <h3 className="text-4xl md:text-5xl font-bold text-zinc-900 leading-tight tracking-tight mb-4">
+                    <motion.div
+                      className="mb-12 text-center"
+                      initial={{ opacity: 0, y: 24, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ delay: 0.18, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                    >
+                      <h3 className={`text-4xl md:text-5xl font-bold leading-tight tracking-tight mb-4 ${currentStepIdx % 2 === 0 ? 'text-zinc-900' : 'text-white'}`}>
                         {breakdown.steps[currentStepIdx].english}
                       </h3>
-                      <p className="text-xl text-ink-muted font-medium">{breakdown.steps[currentStepIdx].chinese}</p>
-                    </div>
+                      <p className={`text-xl font-medium ${currentStepIdx % 2 === 0 ? 'text-ink-muted' : 'text-zinc-300'}`}>{breakdown.steps[currentStepIdx].chinese}</p>
+                    </motion.div>
 
-                    <div className="pt-12 border-t border-zinc-200 flex flex-col items-center gap-4">
+                    <motion.div
+                      className={`pt-12 border-t flex flex-col items-center gap-4 ${currentStepIdx % 2 === 0 ? 'border-zinc-200' : 'border-white/15'}`}
+                      initial={{ opacity: 0, y: 18 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.28, duration: 0.42 }}
+                    >
                       <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-focus-blue/10 text-focus-blue font-bold text-sm">
                         <Plus size={16} />
                         {currentStepIdx + 1} {breakdown.steps[currentStepIdx].label}
                       </span>
-                      <p className="text-lg text-zinc-800 text-center font-medium">
+                      <p className={`text-lg text-center font-medium ${currentStepIdx % 2 === 0 ? 'text-zinc-800' : 'text-zinc-200'}`}>
                         {breakdown.steps[currentStepIdx].explanation}
                       </p>
-                    </div>
-                  </div>
+                    </motion.div>
+                  </motion.div>
                 </div>
               )}
 
