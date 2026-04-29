@@ -53,14 +53,16 @@ export default function App() {
   const activePage = breakdown ? currentStepIdx + 2 : 0;
   const summaryFinalSpan = breakdown
     ? [
-        breakdown.steps.length % 2 === 0 ? 'md:col-span-2' : 'md:col-span-1',
-        breakdown.steps.length % 3 === 0
+        (breakdown.steps.length - 1) % 2 === 0 ? 'md:col-span-2' : 'md:col-span-1',
+        (breakdown.steps.length - 1) % 3 === 0
           ? 'xl:col-span-3'
-          : breakdown.steps.length % 3 === 1
+          : (breakdown.steps.length - 1) % 3 === 1
             ? 'xl:col-span-2'
             : 'xl:col-span-1',
       ].join(' ')
     : '';
+  const summarySteps = breakdown ? breakdown.steps.slice(0, -1) : [];
+  const finalStep = breakdown ? breakdown.steps[breakdown.steps.length - 1] : null;
 
   const goToPage = (index: number) => {
     if (!breakdown) return;
@@ -248,7 +250,7 @@ export default function App() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 relative mb-12 w-full max-w-[1120px]">
 
-                    {breakdown.steps.map((step, index) => (
+                    {summarySteps.map((step, index) => (
                       <motion.article
                         key={`${step.pageNumber}-${index}`}
                         className="relative z-10 bg-white p-5 md:p-6 border border-zinc-200 flex flex-col gap-4 min-h-[260px]"
@@ -270,23 +272,26 @@ export default function App() {
                       </motion.article>
                     ))}
 
-                    <motion.article
-                      className={`relative z-10 bg-primary p-5 md:p-6 flex flex-col gap-4 min-h-[260px] ${summaryFinalSpan}`}
-                      initial={{ opacity: 0, y: 24 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: Math.min(breakdown.steps.length * 0.04, 0.32), duration: 0.36 }}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-[12px] font-bold text-primary-fixed uppercase tracking-widest">Final Target</span>
-                        <div className="w-11 h-11 rounded-full bg-primary-container flex items-center justify-center shrink-0">
-                          <CheckCircle2 size={26} className="text-white" />
+                    {finalStep && (
+                      <motion.article
+                        className={`relative z-10 bg-primary p-5 md:p-6 flex flex-col gap-4 min-h-[260px] ${summaryFinalSpan}`}
+                        initial={{ opacity: 0, y: 24 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: Math.min(summarySteps.length * 0.04, 0.32), duration: 0.36 }}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[12px] font-bold text-primary-fixed uppercase tracking-widest">{finalStep.label || 'Final Target'}</span>
+                          <div className="w-11 h-11 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+                            <CheckCircle2 size={26} className="text-white" />
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-white min-w-0 text-left">
-                        <p className="text-2xl md:text-3xl font-bold mb-3 leading-tight">{breakdown.targetSentence}</p>
-                        <p className="opacity-80 font-medium">This is the complete sentence after all rebuild steps.</p>
-                      </div>
-                    </motion.article>
+                        <div className="text-white min-w-0 text-left flex flex-col gap-3">
+                          <p className="text-2xl md:text-3xl font-bold leading-tight">{finalStep.english || breakdown.targetSentence}</p>
+                          <p className="text-base md:text-lg text-white/80 font-medium leading-relaxed">{finalStep.chinese}</p>
+                          <p className="text-sm text-white/75 leading-relaxed">{finalStep.explanation}</p>
+                        </div>
+                      </motion.article>
+                    )}
                   </div>
 
                   <div className="w-full max-w-[760px] bg-zinc-100 p-10 md:p-12 text-center border border-zinc-200">

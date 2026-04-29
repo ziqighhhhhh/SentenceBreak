@@ -8,9 +8,7 @@ export default defineConfig(({mode}) => {
   return {
     plugins: [react(), tailwindcss()],
     define: {
-      'process.env.WEBAI2API_BASE_URL': JSON.stringify(env.WEBAI2API_BASE_URL),
-      'process.env.WEBAI2API_API_KEY': JSON.stringify(env.WEBAI2API_API_KEY),
-      'process.env.WEBAI2API_MODEL': JSON.stringify(env.WEBAI2API_MODEL),
+      'process.env.NODE_ENV': JSON.stringify(mode),
     },
     resolve: {
       alias: {
@@ -21,10 +19,9 @@ export default defineConfig(({mode}) => {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       hmr: process.env.DISABLE_HMR !== 'true',
       proxy: {
-        '/api/webai': {
-          target: env.WEBAI2API_BASE_URL || 'http://47.238.156.250:3000',
+        '/api': {
+          target: env.API_PROXY_TARGET || 'http://localhost:8787',
           changeOrigin: true,
-          rewrite: urlPath => urlPath.replace(/^\/api\/webai/, ''),
         },
       },
     },
