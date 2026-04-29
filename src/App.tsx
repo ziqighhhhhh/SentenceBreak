@@ -170,19 +170,19 @@ export default function App() {
                     <span className="text-ink-muted text-xl font-semibold mb-2 block tracking-tight uppercase">{breakdown.sourceLabel}</span>
                   </div>
                   
-                  <h2 className="text-primary text-xl font-semibold mb-6">你先读垃圾句子</h2>
+                  <h2 className="text-primary text-xl font-semibold mb-6">先看完整长难句</h2>
                   
                   <div className="glass-card relative w-full max-w-3xl border border-zinc-200 bg-white/50 backdrop-blur-md p-16 mb-12 overflow-hidden text-center">
                     <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary opacity-5 blur-[80px] rounded-full" />
                     <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-focus-blue opacity-5 blur-[80px] rounded-full" />
-                    <p className="text-6xl font-bold text-zinc-900 leading-tight tracking-tight mb-4">{breakdown.steps[0].english}</p>
-                    <p className="text-xl text-ink-muted font-medium">{breakdown.steps[0].chinese}</p>
+                    <p className="text-4xl md:text-5xl font-bold text-zinc-900 leading-tight tracking-tight">{breakdown.targetSentence}</p>
                   </div>
 
                   <div className="flex flex-col items-center gap-6 w-full max-w-3xl">
-                    <h2 className="text-primary text-xl font-semibold">就能拆开这句</h2>
+                    <h2 className="text-primary text-xl font-semibold">再从基础句开始拆解</h2>
                     <div className="w-full bg-zinc-100/50 rounded-2xl border border-zinc-200 p-8 text-center">
-                      <p className="text-lg text-ink-muted italic leading-relaxed font-medium">"{breakdown.targetSentence}"</p>
+                      <p className="text-3xl font-bold text-zinc-900 leading-tight tracking-tight mb-4">{breakdown.steps[0].english}</p>
+                      <p className="text-lg text-ink-muted leading-relaxed font-medium">{breakdown.steps[0].chinese}</p>
                     </div>
                   </div>
                 </div>
