@@ -9,6 +9,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [breakdown, setBreakdown] = useState<SentenceBreakdown | null>(null);
   const [currentStepIdx, setCurrentStepIdx] = useState(-1); // -1 is the "Page 1" (Target + Garbage)
+  const [slideDirection, setSlideDirection] = useState(1);
   
   const handleAnalyze = async () => {
     if (!input.trim()) return;
@@ -16,6 +17,7 @@ export default function App() {
     try {
       const data = await generateBreakdown(input);
       setBreakdown(data);
+      setSlideDirection(1);
       setCurrentStepIdx(-1);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error generating breakdown');
@@ -26,12 +28,14 @@ export default function App() {
 
   const nextStep = () => {
     if (breakdown && currentStepIdx < breakdown.steps.length) {
+      setSlideDirection(1);
       setCurrentStepIdx(prev => prev + 1);
     }
   };
 
   const prevStep = () => {
     if (currentStepIdx > -1) {
+      setSlideDirection(-1);
       setCurrentStepIdx(prev => prev - 1);
     }
   };
@@ -39,6 +43,7 @@ export default function App() {
   const reset = () => {
     setBreakdown(null);
     setInput('');
+    setSlideDirection(-1);
     setCurrentStepIdx(-1);
   };
 
@@ -46,6 +51,18 @@ export default function App() {
 
   const totalPages = breakdown ? breakdown.steps.length + 2 : 0;
   const activePage = breakdown ? currentStepIdx + 2 : 0;
+
+  const goToPage = (index: number) => {
+    if (!breakdown) return;
+    const nextStepIdx = index === 0
+      ? -1
+      : index === totalPages - 1
+        ? breakdown.steps.length
+        : index - 1;
+
+    setSlideDirection(nextStepIdx >= currentStepIdx ? 1 : -1);
+    setCurrentStepIdx(nextStepIdx);
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -85,10 +102,10 @@ export default function App() {
           ) : (
             <motion.div 
               key={`step-${currentStepIdx}`}
-              initial={{ opacity: 0, y: 42, scale: 0.96, filter: 'blur(14px)' }}
-              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, y: -28, scale: 1.03, filter: 'blur(10px)' }}
-              transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, x: slideDirection * 180, scale: 0.98 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: slideDirection * -180, scale: 0.98 }}
+              transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
               className="relative max-w-[980px] w-full"
             >
               <div className="mb-8 flex items-center justify-center gap-2">
@@ -97,10 +114,7 @@ export default function App() {
                     key={index}
                     aria-label={`Go to page ${index + 1}`}
                     onClick={() => {
-                      if (!breakdown) return;
-                      if (index === 0) setCurrentStepIdx(-1);
-                      else if (index === totalPages - 1) setCurrentStepIdx(breakdown.steps.length);
-                      else setCurrentStepIdx(index - 1);
+                      goToPage(index);
                     }}
                     className={`h-1.5 rounded-full transition-all duration-500 ${
                       index + 1 === activePage ? 'w-10 bg-primary' : 'w-1.5 bg-zinc-300 hover:bg-zinc-500'
@@ -172,11 +186,11 @@ export default function App() {
                   <motion.div
                     className="relative w-full max-w-4xl bg-[#f5f5f7] p-12 md:p-20 overflow-hidden text-center"
                     initial={{ backgroundColor: '#ffffff' }}
-                    animate={{ backgroundColor: currentStepIdx % 2 === 0 ? '#f5f5f7' : '#272729' }}
+                    animate={{ backgroundColor: '#f5f5f7' }}
                     transition={{ duration: 0.5 }}
                   >
                     <motion.div
-                      className={`${currentStepIdx % 2 === 0 ? 'text-zinc-900' : 'text-white'}`}
+                      className="text-zinc-900"
                       initial={{ opacity: 0, y: 16 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.08, duration: 0.42 }}
@@ -191,14 +205,14 @@ export default function App() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       transition={{ delay: 0.18, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                     >
-                      <h3 className={`text-4xl md:text-5xl font-bold leading-tight tracking-tight mb-4 ${currentStepIdx % 2 === 0 ? 'text-zinc-900' : 'text-white'}`}>
+                      <h3 className="text-4xl md:text-5xl font-bold leading-tight tracking-tight mb-4 text-zinc-900">
                         {breakdown.steps[currentStepIdx].english}
                       </h3>
-                      <p className={`text-xl font-medium ${currentStepIdx % 2 === 0 ? 'text-ink-muted' : 'text-zinc-300'}`}>{breakdown.steps[currentStepIdx].chinese}</p>
+                      <p className="text-xl font-medium text-ink-muted">{breakdown.steps[currentStepIdx].chinese}</p>
                     </motion.div>
 
                     <motion.div
-                      className={`pt-12 border-t flex flex-col items-center gap-4 ${currentStepIdx % 2 === 0 ? 'border-zinc-200' : 'border-white/15'}`}
+                      className="pt-12 border-t border-zinc-200 flex flex-col items-center gap-4"
                       initial={{ opacity: 0, y: 18 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.28, duration: 0.42 }}
@@ -207,7 +221,7 @@ export default function App() {
                         <Plus size={16} />
                         {currentStepIdx + 1} {breakdown.steps[currentStepIdx].label}
                       </span>
-                      <p className={`text-lg text-center font-medium ${currentStepIdx % 2 === 0 ? 'text-zinc-800' : 'text-zinc-200'}`}>
+                      <p className="text-lg text-center font-medium text-zinc-800">
                         {breakdown.steps[currentStepIdx].explanation}
                       </p>
                     </motion.div>
