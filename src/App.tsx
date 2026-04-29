@@ -125,6 +125,8 @@ export default function App() {
   const reset = () => {
     setBreakdown(null);
     setInput('');
+    setInputHint('');
+    setErrorNotice(null);
     setSlideDirection(-1);
     setCurrentStepIdx(-1);
   };
@@ -145,6 +147,13 @@ export default function App() {
     : '';
   const summarySteps = breakdown ? breakdown.steps.slice(0, -1) : [];
   const finalStep = breakdown ? breakdown.steps[breakdown.steps.length - 1] : null;
+  const pageLabel = breakdown
+    ? currentStepIdx === -1
+      ? 'Base sentence'
+      : currentStepIdx === breakdown.steps.length
+        ? 'Final summary'
+        : `Step ${currentStepIdx + 1} of ${breakdown.steps.length}`
+    : '';
 
   const goToPage = (index: number) => {
     if (!breakdown) return;
@@ -170,8 +179,8 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
               className="max-w-4xl w-full text-center"
             >
-              <h1 className="text-6xl font-bold tracking-tight mb-4">What shall we analyze today?</h1>
-              <p className="text-xl text-ink-muted mb-12">Paste your sentence below to begin the analysis process.</p>
+              <h1 className="text-6xl font-bold tracking-tight mb-4">Break down a complex English sentence</h1>
+              <p className="text-xl text-ink-muted mb-12">Paste a sentence or generate an example, then rebuild it step by step.</p>
 
               {generatingSentence && (
                 <motion.div
@@ -258,6 +267,14 @@ export default function App() {
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <button
+                  onClick={handleGenerateSentence}
+                  disabled={isBusy}
+                  className="inline-flex items-center gap-2 text-primary px-6 py-3 rounded-full text-base font-medium hover:bg-primary/5 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {generatingSentence ? 'Generating...' : 'Generate an example'}
+                  {generatingSentence && <Loader2 size={17} className="animate-spin" />}
+                </button>
+                <button
                   onClick={handleAnalyze}
                   disabled={isBusy || !input.trim()}
                   className="bg-primary text-white px-10 py-4 rounded-full text-lg font-medium shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -265,14 +282,6 @@ export default function App() {
                 >
                   {loading && !generatingSentence ? 'Analyzing...' : 'Analyze this sentence'}
                   {loading ? <Loader2 size={20} className="animate-spin" /> : <ArrowRight size={20} />}
-                </button>
-                <button
-                  onClick={handleGenerateSentence}
-                  disabled={isBusy}
-                  className="inline-flex items-center gap-2 text-primary px-6 py-3 rounded-full text-base font-medium hover:bg-primary/5 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {generatingSentence ? 'Generating...' : 'Generate an example'}
-                  {generatingSentence && <Loader2 size={17} className="animate-spin" />}
                 </button>
               </div>
             </motion.div>
@@ -299,6 +308,10 @@ export default function App() {
                   />
                 ))}
               </div>
+
+              <p className="mb-6 text-center text-sm font-bold uppercase tracking-[0.18em] text-ink-muted">
+                {pageLabel}
+              </p>
 
               <button
                 onClick={prevStep}
@@ -484,7 +497,7 @@ export default function App() {
                       onClick={reset}
                       className="bg-primary text-white px-10 py-4 rounded-full text-lg font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all w-full md:w-auto"
                     >
-                      Complete Exercise
+                      Clear and start over
                     </button>
                   </div>
                 </div>
@@ -494,25 +507,25 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Mobile Bottom Nav */}
-      <footer className="md:hidden bg-white/80 backdrop-blur-md border-t border-zinc-200 fixed bottom-0 w-full h-20 flex items-center justify-between px-8 z-50">
-        <button 
-          onClick={prevStep}
-          disabled={!breakdown || currentStepIdx === -1}
-          className="flex flex-col items-center gap-1 text-zinc-400 disabled:opacity-30"
-        >
-          <ArrowLeft size={20} />
-          <span className="text-[10px] font-bold uppercase tracking-tighter">Previous</span>
-        </button>
-        <button 
-          onClick={nextStep}
-          disabled={!breakdown || isSummary}
-          className="flex flex-col items-center gap-1 text-primary disabled:opacity-30"
-        >
-          <ArrowRight size={20} />
-          <span className="text-[10px] font-bold uppercase tracking-tighter">Next</span>
-        </button>
-      </footer>
+      {breakdown && (
+        <footer className="md:hidden bg-white/80 backdrop-blur-md border-t border-zinc-200 fixed bottom-0 w-full h-20 flex items-center justify-between px-8 z-50">
+          <button
+            onClick={prevStep}
+            disabled={currentStepIdx === -1}
+            className="flex flex-col items-center gap-1 text-zinc-400 disabled:opacity-30"
+          >
+            <ArrowLeft size={20} />
+            <span className="text-[10px] font-bold uppercase tracking-tighter">Previous</span>
+          </button>
+          <button
+            onClick={isSummary ? reset : nextStep}
+            className="flex flex-col items-center gap-1 text-primary disabled:opacity-30"
+          >
+            <ArrowRight size={20} />
+            <span className="text-[10px] font-bold uppercase tracking-tighter">{isSummary ? 'Start over' : 'Next'}</span>
+          </button>
+        </footer>
+      )}
     </div>
   );
 }
