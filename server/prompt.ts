@@ -82,3 +82,17 @@ export function buildBreakdownPrompt(sentence: string): string {
     }
   `;
 }
+
+export function buildComplexSentencePrompt(): string {
+  return `
+    Generate one original, sufficiently complex English long sentence for advanced Chinese learners to analyze.
+
+    Requirements:
+    - Return only one English sentence.
+    - 45 to 75 words.
+    - Include a clear main clause plus at least three learnable structures, such as a relative clause, appositive, participial phrase, contrast clause, prepositional phrase stack, or fronted context phrase.
+    - Make the sentence sound like it could appear in BBC News, The Economist, an academic essay, or a serious magazine.
+    - Do not include a Chinese translation.
+    - Do not include explanations, labels, markdown, or quotation marks around the sentence.
+  `;
+}

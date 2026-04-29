@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowRight, ArrowLeft, CheckCircle2, BookOpen, Type, Plus } from 'lucide-react';
-import { generateBreakdown } from './services/aiService';
+import { generateBreakdown, generateComplexSentence } from './services/aiService';
 import { SentenceBreakdown } from './types';
 
 export default function App() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [generatingSentence, setGeneratingSentence] = useState(false);
   const [breakdown, setBreakdown] = useState<SentenceBreakdown | null>(null);
   const [currentStepIdx, setCurrentStepIdx] = useState(-1); // -1 is the "Page 1" (Target + Garbage)
   const [slideDirection, setSlideDirection] = useState(1);
@@ -30,6 +31,18 @@ export default function App() {
     if (breakdown && currentStepIdx < breakdown.steps.length) {
       setSlideDirection(1);
       setCurrentStepIdx(prev => prev + 1);
+    }
+  };
+
+  const handleGenerateSentence = async () => {
+    setGeneratingSentence(true);
+    try {
+      const sentence = await generateComplexSentence();
+      setInput(sentence);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error generating sentence');
+    } finally {
+      setGeneratingSentence(false);
     }
   };
 
@@ -101,15 +114,24 @@ export default function App() {
                 />
               </div>
 
-              <button
-                onClick={handleAnalyze}
-                disabled={loading || !input.trim()}
-                className="bg-primary text-white px-10 py-4 rounded-full text-lg font-medium shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
-                id="analyze-btn"
-              >
-                {loading ? 'Analyzing...' : 'Analyze Sentence'}
-                {!loading && <ArrowRight size={20} />}
-              </button>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <button
+                  onClick={handleAnalyze}
+                  disabled={loading || !input.trim()}
+                  className="bg-primary text-white px-10 py-4 rounded-full text-lg font-medium shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  id="analyze-btn"
+                >
+                  {loading && !generatingSentence ? 'Analyzing...' : 'Analyze Sentence'}
+                  {!loading && <ArrowRight size={20} />}
+                </button>
+                <button
+                  onClick={handleGenerateSentence}
+                  disabled={loading}
+                  className="border border-primary text-primary px-10 py-4 rounded-full text-lg font-medium hover:bg-primary/5 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {generatingSentence ? 'Generating...' : 'Generate Sentence'}
+                </button>
+              </div>
             </motion.div>
           ) : (
             <motion.div 

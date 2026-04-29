@@ -1,5 +1,5 @@
 import type { SentenceBreakdown } from "../src/types.js";
-import { buildBreakdownPrompt } from "./prompt.js";
+import { buildBreakdownPrompt, buildComplexSentencePrompt } from "./prompt.js";
 
 interface WebAI2APIChatResponse {
   choices?: Array<{
@@ -49,6 +49,31 @@ function assertBreakdown(value: SentenceBreakdown): SentenceBreakdown {
 }
 
 export async function generateBreakdownOnServer(sentence: string): Promise<SentenceBreakdown> {
+  const content = await requestChatCompletion(buildBreakdownPrompt(sentence), {
+    responseFormat: true,
+  });
+
+  return assertBreakdown(parseBreakdown(content));
+}
+
+export async function generateComplexSentenceOnServer(): Promise<string> {
+  const content = await requestChatCompletion(buildComplexSentencePrompt(), {
+    responseFormat: false,
+  });
+
+  const sentence = content
+    .trim()
+    .replace(/^["'`]+|["'`]+$/g, "")
+    .replace(/\s+/g, " ");
+
+  if (sentence.length < 80 || sentence.length > 700 || !/[.!?]$/.test(sentence)) {
+    throw new Error("AI response did not include a valid complex English sentence.");
+  }
+
+  return sentence;
+}
+
+async function requestChatCompletion(prompt: string, options: { responseFormat: boolean }): Promise<string> {
   const baseUrl = (process.env.WEBAI2API_BASE_URL || "http://47.238.156.250:3000").replace(/\/$/, "");
   const apiKey = process.env.WEBAI2API_API_KEY || "";
   const modelName = process.env.WEBAI2API_MODEL || "gemini-2.0-flash";
@@ -68,12 +93,10 @@ export async function generateBreakdownOnServer(sentence: string): Promise<Sente
       messages: [
         {
           role: "user",
-          content: buildBreakdownPrompt(sentence),
+          content: prompt,
         },
       ],
-      response_format: {
-        type: "json_object",
-      },
+      ...(options.responseFormat ? { response_format: { type: "json_object" } } : {}),
       stream: false,
     }),
   });
@@ -89,5 +112,5 @@ export async function generateBreakdownOnServer(sentence: string): Promise<Sente
     throw new Error("WebAI2API response did not include message content.");
   }
 
-  return assertBreakdown(parseBreakdown(content));
+  return content;
 }

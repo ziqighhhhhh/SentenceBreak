@@ -4,6 +4,28 @@ interface BreakdownErrorResponse {
   error?: string;
 }
 
+interface GeneratedSentenceResponse {
+  sentence?: string;
+  error?: string;
+}
+
+export async function generateComplexSentence(): Promise<string> {
+  const response = await fetch("/api/sentence", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = (await response.json()) as GeneratedSentenceResponse;
+
+  if (!response.ok || !data.sentence) {
+    throw new Error(data.error || `Request failed with HTTP ${response.status}`);
+  }
+
+  return data.sentence;
+}
+
 export async function generateBreakdown(sentence: string): Promise<SentenceBreakdown> {
   const response = await fetch("/api/breakdown", {
     method: "POST",

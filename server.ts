@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import express, { type NextFunction, type Request, type Response } from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import { generateBreakdownOnServer } from "./server/webai.js";
+import { generateBreakdownOnServer, generateComplexSentenceOnServer } from "./server/webai.js";
 
 dotenv.config();
 
@@ -95,6 +95,16 @@ app.post("/api/breakdown", rateLimit, async (req: Request, res: Response) => {
     const message = error instanceof Error ? error.message : "Failed to generate breakdown.";
     const status = message.includes("required") || message.includes("string") || message.includes("too long") ? 400 : 502;
     res.status(status).json({ error: message });
+  }
+});
+
+app.post("/api/sentence", rateLimit, async (_req: Request, res: Response) => {
+  try {
+    const sentence = await generateComplexSentenceOnServer();
+    res.json({ sentence });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to generate sentence.";
+    res.status(502).json({ error: message });
   }
 });
 
