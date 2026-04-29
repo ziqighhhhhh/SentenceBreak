@@ -1,6 +1,8 @@
 import { motion } from 'motion/react';
 import { Plus } from 'lucide-react';
 import type { SentenceBreakdown } from '../types';
+import { getAddedTextSegments } from '../utils/highlightDiff';
+import { HighlightedSentence } from './HighlightedSentence';
 
 interface StepCardProps {
   breakdown: SentenceBreakdown;
@@ -52,6 +54,10 @@ export function StepCard({ breakdown, currentStepIdx }: StepCardProps) {
   }
 
   const step = breakdown.steps[currentStepIdx];
+  const previousStep = breakdown.steps[currentStepIdx - 1];
+  const highlightedSentence = previousStep
+    ? getAddedTextSegments(previousStep.english, step.english)
+    : [{ text: step.english, highlighted: false }];
 
   return (
     <div className="flex flex-col items-center">
@@ -78,7 +84,7 @@ export function StepCard({ breakdown, currentStepIdx }: StepCardProps) {
           transition={{ delay: 0.18, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
           <h3 className="text-3xl md:text-5xl font-bold leading-tight tracking-tight mb-4 text-zinc-900">
-            {step.english}
+            <HighlightedSentence segments={highlightedSentence} />
           </h3>
           <p className="text-xl font-medium text-ink-muted">{step.chinese}</p>
         </motion.div>

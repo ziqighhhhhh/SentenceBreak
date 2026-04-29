@@ -1,6 +1,8 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { BookOpen, CheckCircle2, ChevronDown, Type } from 'lucide-react';
 import type { SentenceBreakdown } from '../types';
+import { getAddedTextSegments } from '../utils/highlightDiff';
+import { HighlightedSentence } from './HighlightedSentence';
 
 interface SummaryViewProps {
   breakdown: SentenceBreakdown;
@@ -34,51 +36,60 @@ export function SummaryView({
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 relative mb-12 w-full max-w-[1320px]">
-        {summarySteps.map((step, index) => (
-          <motion.article
-            key={`${step.pageNumber}-${index}`}
-            className="relative z-10 bg-white p-5 md:p-6 border border-zinc-200 flex flex-col gap-4 min-h-[260px]"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: Math.min(index * 0.04, 0.28), duration: 0.36 }}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[12px] font-bold text-primary uppercase tracking-widest">{step.label}</span>
-              <div className="w-11 h-11 rounded-full bg-zinc-50 flex items-center justify-center shrink-0 border border-zinc-100">
-                <span className="text-sm font-bold text-primary">{String(index + 1).padStart(2, '0')}</span>
+        {summarySteps.map((step, index) => {
+          const previousStep = breakdown.steps[index - 1];
+          const highlightedSentence = previousStep
+            ? getAddedTextSegments(previousStep.english, step.english)
+            : [{ text: step.english, highlighted: false }];
+
+          return (
+            <motion.article
+              key={`${step.pageNumber}-${index}`}
+              className="relative z-10 bg-white p-5 md:p-6 border border-zinc-200 flex flex-col gap-4 min-h-[260px]"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(index * 0.04, 0.28), duration: 0.36 }}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[12px] font-bold text-primary uppercase tracking-widest">{step.label}</span>
+                <div className="w-11 h-11 rounded-full bg-zinc-50 flex items-center justify-center shrink-0 border border-zinc-100">
+                  <span className="text-sm font-bold text-primary">{String(index + 1).padStart(2, '0')}</span>
+                </div>
               </div>
-            </div>
-            <div className="min-w-0 text-left flex flex-col gap-3">
-              <p className="text-lg font-bold text-zinc-900 leading-snug">{step.english}</p>
-              <p className="text-sm text-zinc-500 font-medium leading-relaxed">{step.chinese}</p>
-              <button
-                onClick={() => {
-                  onToggleSummaryStep(index);
-                }}
-                aria-expanded={expandedSummarySteps.has(index)}
-                className="mt-1 inline-flex w-fit items-center gap-1 rounded-full text-sm font-bold text-primary transition-all hover:text-primary-container focus:outline-none focus:ring-2 focus:ring-primary/30"
-              >
-                Why this step matters
-                <ChevronDown
-                  size={15}
-                  className={`transition-transform ${expandedSummarySteps.has(index) ? 'rotate-180' : ''}`}
-                />
-              </button>
-              <AnimatePresence initial={false}>
-                {expandedSummarySteps.has(index) && (
-                  <motion.p
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden text-sm text-zinc-700 leading-relaxed"
-                  >
-                    {step.explanation}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.article>
-        ))}
+              <div className="min-w-0 text-left flex flex-col gap-3">
+                <p className="text-lg font-bold text-zinc-900 leading-snug">
+                  <HighlightedSentence segments={highlightedSentence} />
+                </p>
+                <p className="text-sm text-zinc-500 font-medium leading-relaxed">{step.chinese}</p>
+                <button
+                  onClick={() => {
+                    onToggleSummaryStep(index);
+                  }}
+                  aria-expanded={expandedSummarySteps.has(index)}
+                  className="mt-1 inline-flex w-fit items-center gap-1 rounded-full text-sm font-bold text-primary transition-all hover:text-primary-container focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  Why this step matters
+                  <ChevronDown
+                    size={15}
+                    className={`transition-transform ${expandedSummarySteps.has(index) ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                <AnimatePresence initial={false}>
+                  {expandedSummarySteps.has(index) && (
+                    <motion.p
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden text-sm text-zinc-700 leading-relaxed"
+                    >
+                      {step.explanation}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.article>
+          );
+        })}
 
         {finalStep && (
           <motion.article
