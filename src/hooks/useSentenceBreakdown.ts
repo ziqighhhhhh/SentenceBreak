@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { generateBreakdown, generateComplexSentence } from '../services/aiService';
+import { generateBreakdown, generateComplexSentenceStream } from '../services/aiService';
 import { SentenceBreakdown } from '../types';
 
 export type ErrorAction = 'analyze' | 'generate';
@@ -110,7 +110,11 @@ export function useSentenceBreakdown() {
     setErrorNotice(null);
     setGeneratingSentence(true);
     try {
-      const sentence = await generateComplexSentence();
+      let streamedSentence = '';
+      const sentence = await generateComplexSentenceStream((token) => {
+        streamedSentence += token;
+        setInput(streamedSentence);
+      });
       setInput(sentence);
       setInputHint('Example generated. Review it, then click Analyze.');
     } catch (err) {

@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "start": "node dist-server/server.js",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "npm run build:server && node tests/openaiStream.test.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",

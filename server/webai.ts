@@ -1,4 +1,5 @@
 import type { SentenceBreakdown } from "../src/types.js";
+import { readOpenAIStream } from "./openaiStream.js";
 import { buildBreakdownPrompt, buildComplexSentencePrompt } from "./prompt.js";
 
 interface WebAI2APIChatResponse {
@@ -61,20 +62,26 @@ export async function generateComplexSentenceOnServer(): Promise<string> {
     responseFormat: false,
   });
 
-  const sentence = content
-    .trim()
-    .replace(/^["'`]+|["'`]+$/g, "")
-    .replace(/\s+/g, " ");
-
-  if (/[\u3400-\u9FFF\uF900-\uFAFF]/.test(sentence)) {
-    throw new Error("AI response included Chinese text in the generated English sentence.");
-  }
-
-  if (sentence.length < 80 || sentence.length > 700 || !/[.!?]$/.test(sentence)) {
-    throw new Error("AI response did not include a valid complex English sentence.");
-  }
+  const sentence = normalizeGeneratedSentence(content);
+  validateGeneratedSentence(sentence);
 
   return sentence;
+}
+
+export async function* streamComplexSentenceOnServer(): AsyncGenerator<string, string> {
+  let sentence = "";
+
+  for await (const chunk of requestChatCompletionStream(buildComplexSentencePrompt(), {
+    responseFormat: false,
+  })) {
+    sentence += chunk;
+    yield chunk;
+  }
+
+  const normalizedSentence = normalizeGeneratedSentence(sentence);
+  validateGeneratedSentence(normalizedSentence);
+
+  return normalizedSentence;
 }
 
 async function requestChatCompletion(prompt: string, options: { responseFormat: boolean }): Promise<string> {
@@ -117,4 +124,57 @@ async function requestChatCompletion(prompt: string, options: { responseFormat: 
   }
 
   return content;
+}
+
+async function* requestChatCompletionStream(prompt: string, options: { responseFormat: boolean }): AsyncGenerator<string> {
+  const baseUrl = (process.env.WEBAI2API_BASE_URL || "http://47.238.156.250:3000").replace(/\/$/, "");
+  const apiKey = process.env.WEBAI2API_API_KEY || "";
+  const modelName = process.env.WEBAI2API_MODEL || "gemini-2.0-flash";
+
+  if (!apiKey) {
+    throw new Error("Server is missing WEBAI2API_API_KEY.");
+  }
+
+  const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: modelName,
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      ...(options.responseFormat ? { response_format: { type: "json_object" } } : {}),
+      stream: true,
+    }),
+  });
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as WebAI2APIChatResponse;
+    throw new Error(data.error?.message || `WebAI2API request failed with HTTP ${response.status}`);
+  }
+
+  yield* readOpenAIStream(response);
+}
+
+function normalizeGeneratedSentence(content: string): string {
+  return content
+    .trim()
+    .replace(/^["'`]+|["'`]+$/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function validateGeneratedSentence(sentence: string): void {
+  if (/[\u3400-\u9FFF\uF900-\uFAFF]/.test(sentence)) {
+    throw new Error("AI response included Chinese text in the generated English sentence.");
+  }
+
+  if (sentence.length < 80 || sentence.length > 700 || !/[.!?]$/.test(sentence)) {
+    throw new Error("AI response did not include a valid complex English sentence.");
+  }
 }

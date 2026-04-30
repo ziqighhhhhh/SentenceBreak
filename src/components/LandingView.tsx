@@ -129,7 +129,6 @@ export function LandingView({
           className="inline-flex items-center gap-2 text-primary px-6 py-3 rounded-full text-base font-medium hover:bg-primary/5 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {generatingSentence ? 'Generating...' : 'Generate an example'}
-          {generatingSentence && <Loader2 size={17} className="animate-spin" />}
         </button>
         <button
           onClick={onAnalyze}
@@ -138,7 +137,7 @@ export function LandingView({
           id="analyze-btn"
         >
           {loading && !generatingSentence ? 'Analyzing...' : 'Analyze this sentence'}
-          {loading ? <Loader2 size={20} className="animate-spin" /> : <ArrowRight size={20} />}
+          <ArrowRight size={20} />
         </button>
       </div>
     </motion.div>

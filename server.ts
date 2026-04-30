@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import express, { type NextFunction, type Request, type Response } from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import { generateBreakdownOnServer, generateComplexSentenceOnServer } from "./server/webai.js";
+import { generateBreakdownOnServer, generateComplexSentenceOnServer, streamComplexSentenceOnServer } from "./server/webai.js";
 
 dotenv.config();
 
@@ -110,6 +110,36 @@ app.post("/api/sentence", rateLimit, async (_req: Request, res: Response) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to generate sentence.";
     res.status(502).json({ error: message });
+  }
+});
+
+app.post("/api/sentence/stream", rateLimit, async (_req: Request, res: Response) => {
+  res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  try {
+    const stream = streamComplexSentenceOnServer();
+    let finalSentence = "";
+
+    while (true) {
+      const { value, done } = await stream.next();
+
+      if (done) {
+        finalSentence = value;
+        break;
+      }
+
+      res.write(`event: token\ndata: ${JSON.stringify({ text: value })}\n\n`);
+    }
+
+    res.write(`event: done\ndata: ${JSON.stringify({ sentence: finalSentence })}\n\n`);
+    res.end();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to generate sentence.";
+    res.write(`event: error\ndata: ${JSON.stringify({ error: message })}\n\n`);
+    res.end();
   }
 });
 
