@@ -1,6 +1,5 @@
 import { motion } from 'motion/react';
 import { AlertCircle, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
 import type { ErrorNotice } from '../hooks/useSentenceBreakdown';
 import { ParticleReveal } from './ParticleReveal';
 
@@ -8,86 +7,56 @@ interface LandingViewProps {
   input: string;
   loading: boolean;
   generatingSentence: boolean;
+  jumpingGeneratedCharacter: {
+    character: string;
+    index: number;
+  } | null;
   isBusy: boolean;
   showSlowMessage: boolean;
   inputHint: string;
   analysisProgress: string;
   errorNotice: ErrorNotice | null;
+  analysisReady: boolean;
   onInputChange: (value: string) => void;
   onAnalyze: () => void;
   onGenerateSentence: () => void;
+  onStartBreakdown: () => void;
 }
 
 export function LandingView({
   input,
   loading,
   generatingSentence,
+  jumpingGeneratedCharacter,
   isBusy,
   showSlowMessage,
   inputHint,
   analysisProgress,
   errorNotice,
+  analysisReady,
   onInputChange,
   onAnalyze,
   onGenerateSentence,
+  onStartBreakdown,
 }: LandingViewProps) {
-  const pretextAnimationKeyRef = useRef('');
-  const [pretextActive, setPretextActive] = useState(false);
-  const [pretextVisibleText, setPretextVisibleText] = useState('');
-  const generatedSentenceReady = inputHint.startsWith('Example generated') && input.trim().length > 0;
-  const animatedInputText = pretextActive && input.trim().length > 0;
-
-  useEffect(() => {
-    if (!generatedSentenceReady || pretextAnimationKeyRef.current === input) return undefined;
-
-    pretextAnimationKeyRef.current = input;
-    setPretextActive(true);
-
-    const characters = Array.from(input);
-    setPretextVisibleText(characters[0] ?? '');
-
-    const characterDelay = input.length > 180 ? 14 : input.length > 100 ? 18 : 24;
-    let characterIndex = 1;
-    const interval = window.setInterval(() => {
-      characterIndex += 1;
-      setPretextVisibleText(characters.slice(0, characterIndex).join(''));
-
-      if (characterIndex >= characters.length) {
-        window.clearInterval(interval);
-      }
-    }, characterDelay);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [generatedSentenceReady, input]);
-
   const sentenceTextarea = (
     <div className="relative">
-      {animatedInputText && (
-        <div className="pointer-events-none absolute inset-y-0 left-0 right-5 h-44 overflow-hidden whitespace-pre-wrap break-words text-2xl font-medium leading-normal text-ink md:h-64">
-          {Array.from(pretextVisibleText).map((character, index) => (
-            <span
-              key={`${character}-${index}`}
-              className="pretext-letter"
-            >
-              {character}
-            </span>
-          ))}
-        </div>
+      {jumpingGeneratedCharacter && jumpingGeneratedCharacter.character.trim() && (
+        <span
+          key={jumpingGeneratedCharacter.index}
+          className="pretext-current-letter"
+          aria-hidden="true"
+        >
+          {jumpingGeneratedCharacter.character}
+        </span>
       )}
       <textarea
         value={input}
         onChange={(event) => {
-          if (pretextActive) {
-            setPretextVisibleText(event.target.value);
-          }
           onInputChange(event.target.value);
         }}
         placeholder="Enter a complex English sentence here..."
-        className={`w-full h-44 md:h-64 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-2xl placeholder:text-zinc-300 resize-none font-medium leading-normal pr-5 [scrollbar-gutter:stable] ${
-          animatedInputText ? 'text-transparent caret-primary' : 'text-ink'
-        }`}
+        className="w-full h-44 md:h-64 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-2xl text-ink placeholder:text-zinc-300 resize-none font-medium leading-normal pr-5 [scrollbar-gutter:stable]"
         id="sentence-input"
       />
     </div>
@@ -218,9 +187,9 @@ export function LandingView({
 
       <ParticleReveal
         particleCount={7000}
-        revisionKey="landing-actions"
+        revisionKey={`landing-actions-${analysisReady ? 'ready' : 'idle'}`}
         shape="text-card"
-        targetText="Generate an example Analyze this sentence"
+        targetText={analysisReady ? 'Start breakdown Generate another example' : 'Generate an example Analyze this sentence'}
         tone="blue"
       >
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -231,15 +200,27 @@ export function LandingView({
           >
             {generatingSentence ? 'Generating...' : 'Generate an example'}
           </button>
-          <button
-            onClick={onAnalyze}
-            disabled={isBusy || !input.trim()}
-            className="bg-primary text-white px-10 py-4 rounded-full text-lg font-medium shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            id="analyze-btn"
-          >
-            {loading && !generatingSentence ? 'Analyzing...' : 'Analyze this sentence'}
-            <ArrowRight size={20} />
-          </button>
+          {analysisReady ? (
+            <button
+              onClick={onStartBreakdown}
+              disabled={isBusy}
+              className="bg-primary text-white px-10 py-4 rounded-full text-lg font-medium shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              id="analyze-btn"
+            >
+              Start breakdown
+              <ArrowRight size={20} />
+            </button>
+          ) : (
+            <button
+              onClick={onAnalyze}
+              disabled={isBusy || !input.trim()}
+              className="bg-primary text-white px-10 py-4 rounded-full text-lg font-medium shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              id="analyze-btn"
+            >
+              {loading && !generatingSentence ? 'Analyzing...' : 'Analyze this sentence'}
+              <ArrowRight size={20} />
+            </button>
+          )}
         </div>
       </ParticleReveal>
     </motion.div>

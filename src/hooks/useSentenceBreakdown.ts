@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { generateBreakdownStream, generateComplexSentenceStream } from '../services/aiService';
 import { SentenceBreakdown } from '../types';
 
@@ -50,16 +50,149 @@ export function useSentenceBreakdown() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatingSentence, setGeneratingSentence] = useState(false);
+  const [jumpingGeneratedCharacter, setJumpingGeneratedCharacter] = useState<{
+    character: string;
+    index: number;
+  } | null>(null);
   const [showSlowMessage, setShowSlowMessage] = useState(false);
   const [inputHint, setInputHint] = useState('');
   const [analysisProgress, setAnalysisProgress] = useState('');
   const [errorNotice, setErrorNotice] = useState<ErrorNotice | null>(null);
   const [expandedSummarySteps, setExpandedSummarySteps] = useState<ReadonlySet<number>>(new Set());
+  const [cachedBreakdown, setCachedBreakdown] = useState<SentenceBreakdown | null>(null);
   const [breakdown, setBreakdown] = useState<SentenceBreakdown | null>(null);
   const [currentStepIdx, setCurrentStepIdx] = useState(-1);
   const [slideDirection, setSlideDirection] = useState(1);
+  const generatedSentenceTimerRef = useRef<number | null>(null);
+  const cachedBreakdownInputRef = useRef('');
+  const pendingAnalysisRef = useRef<{
+    input: string;
+    promise: Promise<SentenceBreakdown>;
+  } | null>(null);
   const isBusy = loading || generatingSentence;
   const isSummary = breakdown && currentStepIdx === breakdown.steps.length;
+
+  const clearGeneratedSentenceTimer = useCallback(() => {
+    if (generatedSentenceTimerRef.current === null) return;
+
+    window.clearInterval(generatedSentenceTimerRef.current);
+    generatedSentenceTimerRef.current = null;
+  }, []);
+
+  const revealGeneratedSentence = useCallback((sentence: string) => {
+    clearGeneratedSentenceTimer();
+
+    const characters = Array.from(sentence);
+    const characterDelay = sentence.length > 180 ? 14 : sentence.length > 100 ? 18 : 24;
+    let characterIndex = 0;
+
+    setInput('');
+    setJumpingGeneratedCharacter(null);
+
+    generatedSentenceTimerRef.current = window.setInterval(() => {
+      characterIndex += 1;
+      setInput(characters.slice(0, characterIndex).join(''));
+      setJumpingGeneratedCharacter({
+        character: characters[characterIndex - 1] ?? '',
+        index: characterIndex,
+      });
+
+      if (characterIndex >= characters.length) {
+        clearGeneratedSentenceTimer();
+        window.setTimeout(() => {
+          setJumpingGeneratedCharacter(null);
+        }, 220);
+      }
+    }, characterDelay);
+  }, [clearGeneratedSentenceTimer]);
+
+  const cacheBreakdownForInput = useCallback(async (sentence: string, options: { silent?: boolean } = {}) => {
+    const trimmedSentence = sentence.trim();
+    if (!trimmedSentence) return null;
+    const silent = Boolean(options.silent);
+
+    if (cachedBreakdown && cachedBreakdownInputRef.current === trimmedSentence) {
+      return cachedBreakdown;
+    }
+
+    if (pendingAnalysisRef.current?.input === trimmedSentence) {
+      const pendingAnalysis = pendingAnalysisRef.current;
+      if (!silent) {
+        setAnalysisProgress('Preparing cached analysis...');
+        setLoading(true);
+      }
+
+      try {
+        const data = await pendingAnalysis.promise;
+        if (
+          pendingAnalysisRef.current?.promise === pendingAnalysis.promise ||
+          cachedBreakdownInputRef.current === trimmedSentence
+        ) {
+          return data;
+        }
+        return null;
+      } catch (err) {
+        if (!silent) {
+          setErrorNotice({ message: getFriendlyErrorMessage(err, 'analyze'), action: 'analyze' });
+        }
+        return null;
+      } finally {
+        if (!silent) {
+          setLoading(false);
+          setAnalysisProgress('');
+        }
+      }
+    }
+
+    if (!silent) {
+      setAnalysisProgress('Preparing analysis...');
+      setLoading(true);
+    }
+    setErrorNotice(null);
+    setCachedBreakdown(null);
+    cachedBreakdownInputRef.current = '';
+    const analysisPromise = generateBreakdownStream(
+      trimmedSentence,
+      silent ? () => undefined : setAnalysisProgress,
+    );
+    pendingAnalysisRef.current = {
+      input: trimmedSentence,
+      promise: analysisPromise,
+    };
+
+    try {
+      const data = await analysisPromise;
+      if (pendingAnalysisRef.current?.promise === analysisPromise) {
+        setCachedBreakdown(data);
+        cachedBreakdownInputRef.current = trimmedSentence;
+        setInputHint('Analysis ready. Start the breakdown when you are ready.');
+        setExpandedSummarySteps(new Set());
+        setSlideDirection(1);
+        setCurrentStepIdx(-1);
+        return data;
+      }
+      return null;
+    } catch (err) {
+      if (!silent) {
+        setErrorNotice({ message: getFriendlyErrorMessage(err, 'analyze'), action: 'analyze' });
+      }
+      return null;
+    } finally {
+      if (pendingAnalysisRef.current?.promise === analysisPromise) {
+        pendingAnalysisRef.current = null;
+      }
+      if (!silent) {
+        setLoading(false);
+        setAnalysisProgress('');
+      }
+    }
+  }, [cachedBreakdown]);
+
+  useEffect(() => {
+    return () => {
+      clearGeneratedSentenceTimer();
+    };
+  }, [clearGeneratedSentenceTimer]);
 
   useEffect(() => {
     if (!isBusy) {
@@ -77,11 +210,20 @@ export function useSentenceBreakdown() {
   }, [isBusy]);
 
   const handleInputChange = useCallback((value: string) => {
+    clearGeneratedSentenceTimer();
+    setJumpingGeneratedCharacter(null);
     setInput(value);
+    setCachedBreakdown(null);
+    cachedBreakdownInputRef.current = '';
+    pendingAnalysisRef.current = null;
+    setBreakdown(null);
+    setExpandedSummarySteps(new Set());
     setInputHint('');
     setAnalysisProgress('');
     setErrorNotice(null);
-  }, []);
+    setSlideDirection(-1);
+    setCurrentStepIdx(-1);
+  }, [clearGeneratedSentenceTimer]);
 
   const handleAnalyze = useCallback(async () => {
     if (!input.trim()) return;
@@ -94,39 +236,65 @@ export function useSentenceBreakdown() {
       return;
     }
 
-    setLoading(true);
-    try {
-      const data = await generateBreakdownStream(input, setAnalysisProgress);
-      setBreakdown(data);
+    const trimmedInput = input.trim();
+    if (cachedBreakdown && cachedBreakdownInputRef.current === trimmedInput) {
+      setBreakdown(cachedBreakdown);
       setExpandedSummarySteps(new Set());
+      setInputHint('');
+      setAnalysisProgress('');
+      setErrorNotice(null);
       setSlideDirection(1);
       setCurrentStepIdx(-1);
-    } catch (err) {
-      setErrorNotice({ message: getFriendlyErrorMessage(err, 'analyze'), action: 'analyze' });
-    } finally {
-      setLoading(false);
-      setAnalysisProgress('');
+      return;
     }
-  }, [input]);
+
+    const data = await cacheBreakdownForInput(trimmedInput);
+    if (data) {
+      setBreakdown(data);
+      setExpandedSummarySteps(new Set());
+      setInputHint('');
+      setSlideDirection(1);
+      setCurrentStepIdx(-1);
+    }
+  }, [cacheBreakdownForInput, cachedBreakdown, input]);
 
   const handleGenerateSentence = useCallback(async () => {
+    clearGeneratedSentenceTimer();
+    setJumpingGeneratedCharacter(null);
     setInputHint('');
+    setCachedBreakdown(null);
+    cachedBreakdownInputRef.current = '';
+    pendingAnalysisRef.current = null;
+    setBreakdown(null);
+    setExpandedSummarySteps(new Set());
     setErrorNotice(null);
     setGeneratingSentence(true);
     try {
       let streamedSentence = '';
       const sentence = await generateComplexSentenceStream((token) => {
         streamedSentence += token;
-        setInput(streamedSentence);
       });
-      setInput(sentence);
-      setInputHint('Example generated. Review it, then click Analyze.');
+      revealGeneratedSentence(sentence);
+      setInputHint('Example generated. Review it, then start when ready.');
+      void cacheBreakdownForInput(sentence, { silent: true });
     } catch (err) {
       setErrorNotice({ message: getFriendlyErrorMessage(err, 'generate'), action: 'generate' });
     } finally {
       setGeneratingSentence(false);
     }
-  }, []);
+  }, [cacheBreakdownForInput, clearGeneratedSentenceTimer, revealGeneratedSentence]);
+
+  const startCachedBreakdown = useCallback(() => {
+    if (!cachedBreakdown) return;
+
+    setBreakdown(cachedBreakdown);
+    setExpandedSummarySteps(new Set());
+    setInputHint('');
+    setAnalysisProgress('');
+    setErrorNotice(null);
+    setSlideDirection(1);
+    setCurrentStepIdx(-1);
+  }, [cachedBreakdown]);
 
   const nextStep = useCallback(() => {
     if (breakdown && currentStepIdx < breakdown.steps.length) {
@@ -152,7 +320,12 @@ export function useSentenceBreakdown() {
   }, []);
 
   const reset = useCallback(() => {
+    clearGeneratedSentenceTimer();
+    setJumpingGeneratedCharacter(null);
     setBreakdown(null);
+    setCachedBreakdown(null);
+    cachedBreakdownInputRef.current = '';
+    pendingAnalysisRef.current = null;
     setInput('');
     setExpandedSummarySteps(new Set());
     setInputHint('');
@@ -160,7 +333,7 @@ export function useSentenceBreakdown() {
     setErrorNotice(null);
     setSlideDirection(-1);
     setCurrentStepIdx(-1);
-  }, []);
+  }, [clearGeneratedSentenceTimer]);
 
   const clearError = useCallback(() => {
     setErrorNotice(null);
@@ -196,6 +369,12 @@ export function useSentenceBreakdown() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        if (!breakdown && cachedBreakdown && !isBusy) {
+          event.preventDefault();
+          startCachedBreakdown();
+          return;
+        }
+
         if (!breakdown && input.trim() && !isBusy) {
           event.preventDefault();
           void handleAnalyze();
@@ -239,17 +418,19 @@ export function useSentenceBreakdown() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [breakdown, clearError, errorNotice, handleAnalyze, input, isBusy, isSummary, nextStep, prevStep, reset, returnToEdit]);
+  }, [breakdown, cachedBreakdown, clearError, errorNotice, handleAnalyze, input, isBusy, isSummary, nextStep, prevStep, reset, returnToEdit, startCachedBreakdown]);
 
   return {
     input,
     loading,
     generatingSentence,
+    jumpingGeneratedCharacter,
     showSlowMessage,
     inputHint,
     analysisProgress,
     errorNotice,
     expandedSummarySteps,
+    cachedBreakdown,
     breakdown,
     currentStepIdx,
     slideDirection,
@@ -258,6 +439,7 @@ export function useSentenceBreakdown() {
     handleInputChange,
     handleAnalyze,
     handleGenerateSentence,
+    startCachedBreakdown,
     nextStep,
     prevStep,
     reset,

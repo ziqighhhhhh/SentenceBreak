@@ -46,31 +46,35 @@
     transition: opacity 240ms ease-out;
   }
 
-  .pretext-letter {
-    display: inline-block;
-    white-space: pre-wrap;
-    opacity: 0;
-    animation: pretext-letter-jump 420ms cubic-bezier(0.2, 1.35, 0.32, 1) forwards;
+  .pretext-current-letter {
+    position: absolute;
+    right: 1.4rem;
+    top: 0.15rem;
+    z-index: 2;
+    animation: pretext-letter-jump 360ms cubic-bezier(0.2, 1.35, 0.32, 1) both;
+    color: var(--color-ink);
+    font-size: 1.5rem;
+    font-weight: 500;
+    line-height: 1.5;
+    pointer-events: none;
+    transform-origin: 50% 75%;
   }
 }
 
 @keyframes pretext-letter-jump {
   0% {
     opacity: 0;
-    transform: translate3d(0, -22px, 0) rotate(-5deg) scale(0.82);
-    filter: blur(5px);
+    transform: translate3d(0, -18px, 0) rotate(-4deg) scale(0.86);
   }
 
   58% {
     opacity: 1;
-    transform: translate3d(0, 5px, 0) rotate(2deg) scale(1.04);
-    filter: blur(0);
+    transform: translate3d(0, 4px, 0) rotate(1.5deg) scale(1.03);
   }
 
   100% {
     opacity: 1;
     transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
-    filter: blur(0);
   }
 }
 
@@ -79,10 +83,11 @@
     opacity: 1;
   }
 
-  .pretext-letter {
+  .pretext-jump-letter {
     animation: none;
-    opacity: 1;
-    transform: none;
-    filter: none;
+  }
+
+  .pretext-current-letter {
+    animation: none;
   }
 }

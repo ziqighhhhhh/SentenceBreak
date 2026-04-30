@@ -9,11 +9,13 @@ export default function App() {
     input,
     loading,
     generatingSentence,
+    jumpingGeneratedCharacter,
     showSlowMessage,
     inputHint,
     analysisProgress,
     errorNotice,
     expandedSummarySteps,
+    cachedBreakdown,
     breakdown,
     currentStepIdx,
     slideDirection,
@@ -21,6 +23,7 @@ export default function App() {
     handleInputChange,
     handleAnalyze,
     handleGenerateSentence,
+    startCachedBreakdown,
     nextStep,
     prevStep,
     reset,
@@ -37,14 +40,17 @@ export default function App() {
               input={input}
               loading={loading}
               generatingSentence={generatingSentence}
+              jumpingGeneratedCharacter={jumpingGeneratedCharacter}
               isBusy={isBusy}
               showSlowMessage={showSlowMessage}
               inputHint={inputHint}
               analysisProgress={analysisProgress}
               errorNotice={errorNotice}
+              analysisReady={Boolean(cachedBreakdown)}
               onInputChange={handleInputChange}
               onAnalyze={handleAnalyze}
               onGenerateSentence={handleGenerateSentence}
+              onStartBreakdown={startCachedBreakdown}
             />
           ) : (
             <BreakdownPager
