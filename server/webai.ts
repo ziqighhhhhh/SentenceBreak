@@ -54,7 +54,23 @@ export async function generateBreakdownOnServer(sentence: string): Promise<Sente
     responseFormat: true,
   });
 
-  return assertBreakdown(parseBreakdown(content));
+  return parseAndAssertBreakdown(content);
+}
+
+export async function streamBreakdownOnServer(
+  sentence: string,
+  onChunk?: (content: string) => void,
+): Promise<SentenceBreakdown> {
+  let content = "";
+
+  for await (const chunk of requestChatCompletionStream(buildBreakdownPrompt(sentence), {
+    responseFormat: true,
+  })) {
+    content += chunk;
+    onChunk?.(chunk);
+  }
+
+  return parseAndAssertBreakdown(content);
 }
 
 export async function generateComplexSentenceOnServer(): Promise<string> {
@@ -167,6 +183,10 @@ function normalizeGeneratedSentence(content: string): string {
     .trim()
     .replace(/^["'`]+|["'`]+$/g, "")
     .replace(/\s+/g, " ");
+}
+
+function parseAndAssertBreakdown(content: string): SentenceBreakdown {
+  return assertBreakdown(parseBreakdown(content));
 }
 
 function validateGeneratedSentence(sentence: string): void {

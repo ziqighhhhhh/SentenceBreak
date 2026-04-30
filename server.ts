@@ -2,7 +2,8 @@ import dotenv from "dotenv";
 import express, { type NextFunction, type Request, type Response } from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import { generateBreakdownOnServer, generateComplexSentenceOnServer, streamComplexSentenceOnServer } from "./server/webai.js";
+import { formatSseEvent } from "./server/sse.js";
+import { generateBreakdownOnServer, generateComplexSentenceOnServer, streamBreakdownOnServer, streamComplexSentenceOnServer } from "./server/webai.js";
 
 dotenv.config();
 
@@ -15,6 +16,13 @@ const rateWindowMs = 60_000;
 const maxRequestsPerWindow = Number(process.env.RATE_LIMIT_PER_MINUTE || 20);
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
 const chineseTextPattern = /[\u3400-\u9FFF\uF900-\uFAFF]/;
+const breakdownProgressMessages = {
+  validating: "Validating the sentence...",
+  sending: "Sending the sentence to the analyzer...",
+  streaming: "Receiving the streamed analysis...",
+  finalizing: "Finalizing the breakdown...",
+  complete: "Analysis complete.",
+} as const;
 
 if (process.env.TRUST_PROXY) {
   app.set("trust proxy", process.env.TRUST_PROXY);
@@ -113,6 +121,41 @@ app.post("/api/sentence", rateLimit, async (_req: Request, res: Response) => {
   }
 });
 
+app.post("/api/breakdown/stream", rateLimit, async (req: Request, res: Response) => {
+  res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  try {
+    const sentence = readSentence(req.body);
+    let hasReceivedStreamChunk = false;
+
+    const sendProgress = (message: string) => {
+      res.write(formatSseEvent("progress", { message }));
+    };
+
+    sendProgress(breakdownProgressMessages.validating);
+    sendProgress(breakdownProgressMessages.sending);
+
+    const breakdown = await streamBreakdownOnServer(sentence, () => {
+      if (!hasReceivedStreamChunk) {
+        hasReceivedStreamChunk = true;
+        sendProgress(breakdownProgressMessages.streaming);
+      }
+    });
+
+    sendProgress(breakdownProgressMessages.finalizing);
+    sendProgress(breakdownProgressMessages.complete);
+    res.write(formatSseEvent("result", { breakdown }));
+    res.end();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to generate breakdown.";
+    res.write(formatSseEvent("error", { error: message }));
+    res.end();
+  }
+});
+
 app.post("/api/sentence/stream", rateLimit, async (_req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache, no-transform");
@@ -131,14 +174,14 @@ app.post("/api/sentence/stream", rateLimit, async (_req: Request, res: Response)
         break;
       }
 
-      res.write(`event: token\ndata: ${JSON.stringify({ text: value })}\n\n`);
+      res.write(formatSseEvent("token", { text: value }));
     }
 
-    res.write(`event: done\ndata: ${JSON.stringify({ sentence: finalSentence })}\n\n`);
+    res.write(formatSseEvent("done", { sentence: finalSentence }));
     res.end();
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to generate sentence.";
-    res.write(`event: error\ndata: ${JSON.stringify({ error: message })}\n\n`);
+    res.write(formatSseEvent("error", { error: message }));
     res.end();
   }
 });

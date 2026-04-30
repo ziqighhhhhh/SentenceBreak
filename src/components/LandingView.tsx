@@ -9,6 +9,7 @@ interface LandingViewProps {
   isBusy: boolean;
   showSlowMessage: boolean;
   inputHint: string;
+  analysisProgress: string;
   errorNotice: ErrorNotice | null;
   onInputChange: (value: string) => void;
   onAnalyze: () => void;
@@ -22,6 +23,7 @@ export function LandingView({
   isBusy,
   showSlowMessage,
   inputHint,
+  analysisProgress,
   errorNotice,
   onInputChange,
   onAnalyze,
@@ -81,7 +83,7 @@ export function LandingView({
         >
           <Loader2 size={22} className="animate-spin" />
           <div className="text-left">
-            <p className="text-base font-bold">Breaking down the sentence step by step...</p>
+            <p className="text-base font-bold">{analysisProgress || 'Breaking down the sentence step by step...'}</p>
             {showSlowMessage && (
               <p className="mt-1 text-sm font-medium text-white/80">This may take a little longer for complex sentences.</p>
             )}

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { parseOpenAIStreamPayload } from "../dist-server/server/openaiStream.js";
+import { formatSseEvent } from "../dist-server/server/sse.js";
 
 function test(name, run) {
   try {
@@ -31,4 +32,12 @@ test("parseOpenAIStreamPayload ignores the done marker", () => {
 
 test("parseOpenAIStreamPayload rejects malformed stream JSON", () => {
   assert.throws(() => parseOpenAIStreamPayload("{not json"), /Invalid streamed AI response/);
+});
+
+test("formatSseEvent serializes event name and JSON payload", () => {
+  assert.equal(formatSseEvent("progress", { message: "Preparing analysis..." }), 'event: progress\ndata: {"message":"Preparing analysis..."}\n\n');
+});
+
+test("formatSseEvent rejects invalid event names", () => {
+  assert.throws(() => formatSseEvent("bad event", {}), /Invalid SSE event name/);
 });

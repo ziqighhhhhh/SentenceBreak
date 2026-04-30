@@ -11,6 +11,7 @@ export default function App() {
     generatingSentence,
     showSlowMessage,
     inputHint,
+    analysisProgress,
     errorNotice,
     expandedSummarySteps,
     breakdown,
@@ -39,6 +40,7 @@ export default function App() {
               isBusy={isBusy}
               showSlowMessage={showSlowMessage}
               inputHint={inputHint}
+              analysisProgress={analysisProgress}
               errorNotice={errorNotice}
               onInputChange={handleInputChange}
               onAnalyze={handleAnalyze}

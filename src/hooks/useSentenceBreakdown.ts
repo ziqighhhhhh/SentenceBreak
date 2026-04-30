@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { generateBreakdown, generateComplexSentenceStream } from '../services/aiService';
+import { generateBreakdownStream, generateComplexSentenceStream } from '../services/aiService';
 import { SentenceBreakdown } from '../types';
 
 export type ErrorAction = 'analyze' | 'generate';
@@ -52,6 +52,7 @@ export function useSentenceBreakdown() {
   const [generatingSentence, setGeneratingSentence] = useState(false);
   const [showSlowMessage, setShowSlowMessage] = useState(false);
   const [inputHint, setInputHint] = useState('');
+  const [analysisProgress, setAnalysisProgress] = useState('');
   const [errorNotice, setErrorNotice] = useState<ErrorNotice | null>(null);
   const [expandedSummarySteps, setExpandedSummarySteps] = useState<ReadonlySet<number>>(new Set());
   const [breakdown, setBreakdown] = useState<SentenceBreakdown | null>(null);
@@ -78,12 +79,14 @@ export function useSentenceBreakdown() {
   const handleInputChange = useCallback((value: string) => {
     setInput(value);
     setInputHint('');
+    setAnalysisProgress('');
     setErrorNotice(null);
   }, []);
 
   const handleAnalyze = useCallback(async () => {
     if (!input.trim()) return;
     setInputHint('');
+    setAnalysisProgress('Preparing analysis...');
     setErrorNotice(null);
 
     if (hasChineseText(input)) {
@@ -93,7 +96,7 @@ export function useSentenceBreakdown() {
 
     setLoading(true);
     try {
-      const data = await generateBreakdown(input);
+      const data = await generateBreakdownStream(input, setAnalysisProgress);
       setBreakdown(data);
       setExpandedSummarySteps(new Set());
       setSlideDirection(1);
@@ -102,6 +105,7 @@ export function useSentenceBreakdown() {
       setErrorNotice({ message: getFriendlyErrorMessage(err, 'analyze'), action: 'analyze' });
     } finally {
       setLoading(false);
+      setAnalysisProgress('');
     }
   }, [input]);
 
@@ -141,6 +145,7 @@ export function useSentenceBreakdown() {
   const returnToEdit = useCallback(() => {
     setBreakdown(null);
     setInputHint('');
+    setAnalysisProgress('');
     setErrorNotice(null);
     setSlideDirection(-1);
     setCurrentStepIdx(-1);
@@ -151,6 +156,7 @@ export function useSentenceBreakdown() {
     setInput('');
     setExpandedSummarySteps(new Set());
     setInputHint('');
+    setAnalysisProgress('');
     setErrorNotice(null);
     setSlideDirection(-1);
     setCurrentStepIdx(-1);
@@ -241,6 +247,7 @@ export function useSentenceBreakdown() {
     generatingSentence,
     showSlowMessage,
     inputHint,
+    analysisProgress,
     errorNotice,
     expandedSummarySteps,
     breakdown,
