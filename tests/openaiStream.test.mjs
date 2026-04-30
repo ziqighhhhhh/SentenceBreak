@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { parseOpenAIStreamPayload } from "../dist-server/server/openaiStream.js";
+import { resolveClientDistPath } from "../dist-server/server/paths.js";
 import { formatSseEvent } from "../dist-server/server/sse.js";
 
 function test(name, run) {
@@ -40,4 +41,12 @@ test("formatSseEvent serializes event name and JSON payload", () => {
 
 test("formatSseEvent rejects invalid event names", () => {
   assert.throws(() => formatSseEvent("bad event", {}), /Invalid SSE event name/);
+});
+
+test("resolveClientDistPath points to root dist from source server directory", () => {
+  assert.match(resolveClientDistPath("/app/SentenceBreak"), /SentenceBreak[\\/]dist$/);
+});
+
+test("resolveClientDistPath points to root dist from compiled server directory", () => {
+  assert.match(resolveClientDistPath("/app/SentenceBreak/dist-server"), /SentenceBreak[\\/]dist$/);
 });

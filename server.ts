@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import express, { type NextFunction, type Request, type Response } from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import { resolveClientDistPath } from "./server/paths.js";
 import { formatSseEvent } from "./server/sse.js";
 import { generateBreakdownOnServer, generateComplexSentenceOnServer, streamBreakdownOnServer, streamComplexSentenceOnServer } from "./server/webai.js";
 
@@ -11,7 +12,7 @@ const app = express();
 const port = Number(process.env.PORT || 8787);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const distPath = path.join(__dirname, "dist");
+const distPath = resolveClientDistPath(__dirname);
 const rateWindowMs = 60_000;
 const maxRequestsPerWindow = Number(process.env.RATE_LIMIT_PER_MINUTE || 20);
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
