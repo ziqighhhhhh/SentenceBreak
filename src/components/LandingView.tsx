@@ -1,6 +1,8 @@
 import { motion } from 'motion/react';
 import { AlertCircle, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import type { ErrorNotice } from '../hooks/useSentenceBreakdown';
+import { ParticleReveal } from './ParticleReveal';
 
 interface LandingViewProps {
   input: string;
@@ -29,6 +31,68 @@ export function LandingView({
   onAnalyze,
   onGenerateSentence,
 }: LandingViewProps) {
+  const pretextAnimationKeyRef = useRef('');
+  const [pretextActive, setPretextActive] = useState(false);
+  const [pretextVisibleText, setPretextVisibleText] = useState('');
+  const generatedSentenceReady = inputHint.startsWith('Example generated') && input.trim().length > 0;
+  const animatedInputText = pretextActive && input.trim().length > 0;
+
+  useEffect(() => {
+    if (!generatedSentenceReady || pretextAnimationKeyRef.current === input) return undefined;
+
+    pretextAnimationKeyRef.current = input;
+    setPretextActive(true);
+
+    const characters = Array.from(input);
+    setPretextVisibleText(characters[0] ?? '');
+
+    const characterDelay = input.length > 180 ? 14 : input.length > 100 ? 18 : 24;
+    let characterIndex = 1;
+    const interval = window.setInterval(() => {
+      characterIndex += 1;
+      setPretextVisibleText(characters.slice(0, characterIndex).join(''));
+
+      if (characterIndex >= characters.length) {
+        window.clearInterval(interval);
+      }
+    }, characterDelay);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [generatedSentenceReady, input]);
+
+  const sentenceTextarea = (
+    <div className="relative">
+      {animatedInputText && (
+        <div className="pointer-events-none absolute inset-y-0 left-0 right-5 h-44 overflow-hidden whitespace-pre-wrap break-words text-2xl font-medium leading-normal text-ink md:h-64">
+          {Array.from(pretextVisibleText).map((character, index) => (
+            <span
+              key={`${character}-${index}`}
+              className="pretext-letter"
+            >
+              {character}
+            </span>
+          ))}
+        </div>
+      )}
+      <textarea
+        value={input}
+        onChange={(event) => {
+          if (pretextActive) {
+            setPretextVisibleText(event.target.value);
+          }
+          onInputChange(event.target.value);
+        }}
+        placeholder="Enter a complex English sentence here..."
+        className={`w-full h-44 md:h-64 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-2xl placeholder:text-zinc-300 resize-none font-medium leading-normal pr-5 [scrollbar-gutter:stable] ${
+          animatedInputText ? 'text-transparent caret-primary' : 'text-ink'
+        }`}
+        id="sentence-input"
+      />
+    </div>
+  );
+
   return (
     <motion.div
       key="landing"
@@ -37,58 +101,86 @@ export function LandingView({
       exit={{ opacity: 0, y: -20 }}
       className="max-w-4xl w-full text-center"
     >
-      <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">Break down a complex English sentence</h1>
-      <p className="text-xl text-ink-muted mb-12">Paste a sentence or generate an example, then rebuild it step by step.</p>
+      <ParticleReveal
+        className="mb-12"
+        particleCount={12000}
+        revisionKey="landing-title"
+        shape="text"
+        targetText="Break down a complex English sentence"
+        tone="blue"
+      >
+        <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">Break down a complex English sentence</h1>
+        <p className="text-xl text-ink-muted">Paste a sentence or generate an example, then rebuild it step by step.</p>
+      </ParticleReveal>
 
       {generatingSentence && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 mx-auto flex max-w-xl items-center justify-center gap-3 rounded-2xl bg-white px-5 py-4 text-primary ring-1 ring-primary/10"
-          role="status"
-          aria-live="polite"
+        <ParticleReveal
+          className="mb-6 mx-auto max-w-xl"
+          particleCount={7000}
+          revisionKey="generate-loading"
+          shape="text-card"
+          targetText="Generating an example sentence"
+          tone="blue"
         >
-          <Loader2 size={20} className="animate-spin" />
-          <div className="text-left">
-            <p className="text-sm font-bold">Generating an example sentence...</p>
-            {showSlowMessage && (
-              <p className="mt-1 text-xs font-semibold text-ink-muted">This may take a little longer for complex sentences.</p>
-            )}
-          </div>
-        </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-center gap-3 rounded-2xl bg-white px-5 py-4 text-primary ring-1 ring-primary/10"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2 size={20} className="animate-spin" />
+            <div className="text-left">
+              <p className="text-sm font-bold">Generating an example sentence...</p>
+              {showSlowMessage && (
+                <p className="mt-1 text-xs font-semibold text-ink-muted">This may take a little longer for complex sentences.</p>
+              )}
+            </div>
+          </motion.div>
+        </ParticleReveal>
       )}
 
-      <div className="glass-card p-12 text-left mb-8 transition-all focus-within:border-primary/20 focus-within:shadow-[0_0_0_4px_rgba(0,78,159,0.08)]">
-        <label htmlFor="sentence-input" className="mb-4 block text-sm font-bold uppercase tracking-[0.16em] text-ink-muted">
-          English sentence
-        </label>
-        <textarea
-          value={input}
-          onChange={(event) => {
-            onInputChange(event.target.value);
-          }}
-          placeholder="Enter a complex English sentence here..."
-          className="w-full h-44 md:h-64 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-2xl text-ink placeholder:text-zinc-300 resize-none font-medium leading-normal"
-          id="sentence-input"
-        />
-      </div>
+      <ParticleReveal
+        className="mb-8"
+        particleCount={14000}
+        revisionKey="landing-input-card"
+        shape="text-card"
+        targetText="English sentence Enter a complex English sentence here"
+        tone="light"
+      >
+        <div className="glass-card p-12 text-left transition-all focus-within:border-primary/20 focus-within:shadow-[0_0_0_4px_rgba(0,78,159,0.08)]">
+          <label htmlFor="sentence-input" className="mb-4 block text-sm font-bold uppercase tracking-[0.16em] text-ink-muted">
+            English sentence
+          </label>
+          {sentenceTextarea}
+        </div>
+      </ParticleReveal>
 
       {loading && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 mx-auto flex max-w-xl items-center justify-center gap-3 rounded-2xl bg-primary px-6 py-5 text-white shadow-lg"
-          role="status"
-          aria-live="polite"
+        <ParticleReveal
+          className="mb-6 mx-auto max-w-xl"
+          particleCount={8000}
+          revisionKey="analysis-loading"
+          shape="text-card"
+          targetText="Breaking down the sentence step by step"
+          tone="blue"
         >
-          <Loader2 size={22} className="animate-spin" />
-          <div className="text-left">
-            <p className="text-base font-bold">{analysisProgress || 'Breaking down the sentence step by step...'}</p>
-            {showSlowMessage && (
-              <p className="mt-1 text-sm font-medium text-white/80">This may take a little longer for complex sentences.</p>
-            )}
-          </div>
-        </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-center gap-3 rounded-2xl bg-primary px-6 py-5 text-white shadow-lg"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2 size={22} className="animate-spin" />
+            <div className="text-left">
+              <p className="text-base font-bold">{analysisProgress || 'Breaking down the sentence step by step...'}</p>
+              {showSlowMessage && (
+                <p className="mt-1 text-sm font-medium text-white/80">This may take a little longer for complex sentences.</p>
+              )}
+            </div>
+          </motion.div>
+        </ParticleReveal>
       )}
 
       {inputHint && (
@@ -124,24 +216,32 @@ export function LandingView({
         </motion.div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-        <button
-          onClick={onGenerateSentence}
-          disabled={isBusy}
-          className="inline-flex items-center gap-2 text-primary px-6 py-3 rounded-full text-base font-medium hover:bg-primary/5 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {generatingSentence ? 'Generating...' : 'Generate an example'}
-        </button>
-        <button
-          onClick={onAnalyze}
-          disabled={isBusy || !input.trim()}
-          className="bg-primary text-white px-10 py-4 rounded-full text-lg font-medium shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          id="analyze-btn"
-        >
-          {loading && !generatingSentence ? 'Analyzing...' : 'Analyze this sentence'}
-          <ArrowRight size={20} />
-        </button>
-      </div>
+      <ParticleReveal
+        particleCount={7000}
+        revisionKey="landing-actions"
+        shape="text-card"
+        targetText="Generate an example Analyze this sentence"
+        tone="blue"
+      >
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <button
+            onClick={onGenerateSentence}
+            disabled={isBusy}
+            className="inline-flex items-center gap-2 text-primary px-6 py-3 rounded-full text-base font-medium hover:bg-primary/5 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {generatingSentence ? 'Generating...' : 'Generate an example'}
+          </button>
+          <button
+            onClick={onAnalyze}
+            disabled={isBusy || !input.trim()}
+            className="bg-primary text-white px-10 py-4 rounded-full text-lg font-medium shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            id="analyze-btn"
+          >
+            {loading && !generatingSentence ? 'Analyzing...' : 'Analyze this sentence'}
+            <ArrowRight size={20} />
+          </button>
+        </div>
+      </ParticleReveal>
     </motion.div>
   );
 }
