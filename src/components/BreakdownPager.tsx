@@ -1,4 +1,4 @@
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { SentenceBreakdown } from '../types';
 import { StepCard } from './StepCard';
@@ -38,34 +38,35 @@ export function BreakdownPager({
 
   return (
     <>
-      <motion.div
-        key={`step-${currentStepIdx}`}
-        initial={{ opacity: 0, x: slideDirection * 180, scale: 0.98 }}
-        animate={{ opacity: 1, x: 0, scale: 1 }}
-        exit={{ opacity: 0, x: slideDirection * -180, scale: 0.98 }}
-        transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-        className="relative w-full max-w-[min(1440px,calc(100vw-48px))]"
-      >
-        <div className="mb-8 flex flex-wrap items-center justify-center gap-1" aria-label="Breakdown progress">
-          {Array.from({ length: totalPages }).map((_, index) => (
-            <button
-              key={index}
-              aria-label={`Go to page ${index + 1}`}
-              aria-current={index + 1 === activePage ? 'step' : undefined}
-              aria-disabled={index + 1 === activePage}
-              onClick={() => {
-                onGoToPage(index);
-              }}
-              className="flex h-11 w-11 items-center justify-center rounded-full transition-all hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <span
-                className={`h-1.5 rounded-full transition-all duration-500 ${
-                  index + 1 === activePage ? 'w-10 bg-primary' : 'w-1.5 bg-zinc-300'
-                }`}
-              />
-            </button>
-          ))}
-        </div>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={`step-${currentStepIdx}`}
+          initial={{ opacity: 0, x: slideDirection * 96, scale: 0.985 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          exit={{ opacity: 0, x: slideDirection * -96, scale: 0.985 }}
+          transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
+          className="relative w-full max-w-[min(1440px,calc(100vw-48px))]"
+        >
+          <div className="mb-8 flex flex-wrap items-center justify-center gap-1" aria-label="Breakdown progress">
+            {Array.from({ length: totalPages }).map((_, index) => (
+              <button
+                key={index}
+                aria-label={`Go to page ${index + 1}`}
+                aria-current={index + 1 === activePage ? 'step' : undefined}
+                aria-disabled={index + 1 === activePage}
+                onClick={() => {
+                  onGoToPage(index);
+                }}
+                className="flex h-11 w-11 items-center justify-center rounded-full transition-all hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <span
+                  className={`h-1.5 rounded-full transition-all duration-500 ${
+                    index + 1 === activePage ? 'w-10 bg-primary' : 'w-1.5 bg-zinc-300'
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
 
         <p className="mb-6 text-center text-sm font-bold uppercase tracking-[0.18em] text-ink-muted">
           {pageLabel}
@@ -104,7 +105,8 @@ export function BreakdownPager({
             onReset={onReset}
           />
         )}
-      </motion.div>
+        </motion.div>
+      </AnimatePresence>
 
       <footer className="md:hidden bg-white/80 backdrop-blur-md border-t border-zinc-200 fixed bottom-0 w-full h-20 flex items-center justify-between px-8 z-50">
         <button
