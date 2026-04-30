@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { SentenceBreakdown } from '../types';
+import { ParticleReveal } from './ParticleReveal';
 import { StepCard } from './StepCard';
 import { SummaryView } from './SummaryView';
 
@@ -35,6 +36,14 @@ export function BreakdownPager({
     : currentStepIdx === breakdown.steps.length
       ? 'Final summary'
       : `Step ${currentStepIdx + 1} of ${breakdown.steps.length}`;
+  const activeStep = currentStepIdx >= 0 && currentStepIdx < breakdown.steps.length
+    ? breakdown.steps[currentStepIdx]
+    : null;
+  const targetText = currentStepIdx === -1
+    ? `${breakdown.sourceLabel} ${breakdown.targetSentence} ${breakdown.steps[0]?.english ?? ''}`
+    : isSummary
+      ? `Sentence Assembly ${breakdown.targetSentence}`
+      : `${activeStep?.english ?? ''} ${activeStep?.chinese ?? ''} ${activeStep?.label ?? ''}`;
 
   return (
     <>
@@ -88,22 +97,32 @@ export function BreakdownPager({
           <ArrowRight size={20} />
         </button>
 
-        {currentStepIdx === -1 && (
-          <StepCard breakdown={breakdown} currentStepIdx={currentStepIdx} />
-        )}
+        <ParticleReveal
+          key={`particles-${currentStepIdx}`}
+          flowDirection={slideDirection > 0 ? 1 : -1}
+          particleCount={isSummary ? 17000 : 15000}
+          revisionKey={`card-${currentStepIdx}-${slideDirection}-${targetText.length}`}
+          shape="text-card"
+          targetText={targetText}
+          tone={isSummary ? 'dark' : 'blue'}
+        >
+          {currentStepIdx === -1 && (
+            <StepCard breakdown={breakdown} currentStepIdx={currentStepIdx} />
+          )}
 
-        {currentStepIdx >= 0 && currentStepIdx < breakdown.steps.length && (
-          <StepCard breakdown={breakdown} currentStepIdx={currentStepIdx} />
-        )}
+          {currentStepIdx >= 0 && currentStepIdx < breakdown.steps.length && (
+            <StepCard breakdown={breakdown} currentStepIdx={currentStepIdx} />
+          )}
 
-        {isSummary && (
-          <SummaryView
-            breakdown={breakdown}
-            expandedSummarySteps={expandedSummarySteps}
-            onToggleSummaryStep={onToggleSummaryStep}
-            onReset={onReset}
-          />
-        )}
+          {isSummary && (
+            <SummaryView
+              breakdown={breakdown}
+              expandedSummarySteps={expandedSummarySteps}
+              onToggleSummaryStep={onToggleSummaryStep}
+              onReset={onReset}
+            />
+          )}
+        </ParticleReveal>
       </motion.div>
 
       <footer className="md:hidden bg-white/80 backdrop-blur-md border-t border-zinc-200 fixed bottom-0 w-full h-20 flex items-center justify-between px-8 z-50">
