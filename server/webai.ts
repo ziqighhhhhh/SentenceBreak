@@ -12,6 +12,23 @@ interface WebAI2APIChatResponse {
   };
 }
 
+function readWebAI2APIBaseUrl(): string {
+  const rawBaseUrl = process.env.WEBAI2API_BASE_URL;
+
+  if (!rawBaseUrl) {
+    throw new Error("Server is missing WEBAI2API_BASE_URL.");
+  }
+
+  const parsedUrl = new URL(rawBaseUrl);
+  const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(parsedUrl.hostname);
+
+  if (parsedUrl.protocol !== "https:" && !(process.env.NODE_ENV !== "production" && isLocalhost)) {
+    throw new Error("WEBAI2API_BASE_URL must use HTTPS in production.");
+  }
+
+  return parsedUrl.toString().replace(/\/$/, "");
+}
+
 function parseBreakdown(content: string): SentenceBreakdown {
   const trimmed = content.trim();
   const jsonText = trimmed
@@ -78,7 +95,7 @@ export async function generateComplexSentenceOnServer(): Promise<string> {
 }
 
 async function requestChatCompletion(prompt: string, options: { responseFormat: boolean }): Promise<string> {
-  const baseUrl = (process.env.WEBAI2API_BASE_URL || "http://47.238.156.250:3000").replace(/\/$/, "");
+  const baseUrl = readWebAI2APIBaseUrl();
   const apiKey = process.env.WEBAI2API_API_KEY || "";
   const modelName = process.env.WEBAI2API_MODEL || "gemini-2.0-flash";
 
