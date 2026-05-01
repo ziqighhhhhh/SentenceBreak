@@ -15,6 +15,7 @@
     "test": "npm run build:server && node tests/openaiStream.test.mjs"
   },
   "dependencies": {
+    "@chenglou/pretext": "^0.0.6",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",

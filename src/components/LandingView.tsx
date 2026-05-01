@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { AlertCircle, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
 import type { ErrorNotice } from '../hooks/useSentenceBreakdown';
 import { ParticleReveal } from './ParticleReveal';
+import { PretextJumpText } from './PretextJumpText';
 
 interface LandingViewProps {
   input: string;
@@ -41,15 +42,7 @@ export function LandingView({
 }: LandingViewProps) {
   const sentenceTextarea = (
     <div className="relative">
-      {jumpingGeneratedCharacter && jumpingGeneratedCharacter.character.trim() && (
-        <span
-          key={jumpingGeneratedCharacter.index}
-          className="pretext-current-letter"
-          aria-hidden="true"
-        >
-          {jumpingGeneratedCharacter.character}
-        </span>
-      )}
+      <PretextJumpText active={Boolean(jumpingGeneratedCharacter)} text={input} />
       <textarea
         value={input}
         onChange={(event) => {
