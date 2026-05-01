@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useReducedMotion } from 'motion/react';
 
 type ParticleTone = 'blue' | 'light' | 'dark';
@@ -33,6 +34,11 @@ interface Particle extends TargetPoint {
 interface Bounds {
   width: number;
   height: number;
+}
+
+interface TargetRect extends Bounds {
+  left: number;
+  top: number;
 }
 
 const toneColors: Record<ParticleTone, [string, string, string]> = {
@@ -174,44 +180,63 @@ function createTextPoints(bounds: Bounds, text: string, count: number, random: (
   return Array.from({ length: count }, () => candidates[Math.floor(random() * candidates.length)]);
 }
 
+function offsetTargetPoints(points: TargetPoint[], targetRect: TargetRect): TargetPoint[] {
+  return points.map((point) => ({
+    ...point,
+    x: point.x + targetRect.left,
+    y: point.y + targetRect.top,
+  }));
+}
+
 function createParticles({
-  bounds,
+  viewportBounds,
+  targetRect,
   particleCount,
   revisionKey,
   shape,
   targetText,
   flowDirection,
 }: {
-  bounds: Bounds;
   flowDirection: -1 | 0 | 1;
   particleCount: number;
   revisionKey: string;
   shape: TargetShape;
   targetText: string;
+  targetRect: TargetRect;
+  viewportBounds: Bounds;
 }): Particle[] {
-  const random = createSeededRandom(`${revisionKey}:${bounds.width}:${bounds.height}:${targetText}`);
-  const maxParticles = clamp(Math.floor((bounds.width * bounds.height) / 42), 1800, particleCount);
+  const random = createSeededRandom(
+    `${revisionKey}:${viewportBounds.width}:${viewportBounds.height}:${targetRect.left}:${targetRect.top}:${targetText}`,
+  );
+  const maxParticles = clamp(Math.floor((targetRect.width * targetRect.height) / 42), 1800, particleCount);
   const textRatio = shape === 'text' ? 1 : shape === 'text-card' ? 0.58 : 0;
   const textCount = Math.floor(maxParticles * textRatio);
   const cardCount = maxParticles - textCount;
+  const targetBounds = {
+    width: targetRect.width,
+    height: targetRect.height,
+  };
   const targets = [
-    ...(shape !== 'text' ? createCardSurfacePoints(bounds, cardCount, random) : []),
-    ...(shape !== 'card' ? createTextPoints(bounds, targetText, textCount || maxParticles, random) : []),
+    ...(shape !== 'text' ? createCardSurfacePoints(targetBounds, cardCount, random) : []),
+    ...(shape !== 'card' ? createTextPoints(targetBounds, targetText, textCount || maxParticles, random) : []),
   ];
-  const normalizedTargets = targets.length > maxParticles
-    ? Array.from({ length: maxParticles }, () => targets[Math.floor(random() * targets.length)])
-    : targets;
-  const spread = Math.max(bounds.width, bounds.height);
+  const viewportTargets = offsetTargetPoints(
+    targets.length > maxParticles
+      ? Array.from({ length: maxParticles }, () => targets[Math.floor(random() * targets.length)])
+      : targets,
+    targetRect,
+  );
+  const spread = Math.max(viewportBounds.width, viewportBounds.height);
   const directionalOriginX = flowDirection === 0
-    ? bounds.width / 2
-    : bounds.width / 2 + flowDirection * bounds.width * 0.92;
-  const directionalSweep = flowDirection === 0 ? spread * 2.6 : spread * 1.15;
-  const verticalSweep = flowDirection === 0 ? spread * 1.8 : spread * 1.35;
+    ? viewportBounds.width / 2
+    : viewportBounds.width / 2 + flowDirection * viewportBounds.width * 0.92;
+  const directionalSweep = flowDirection === 0 ? spread * 2.6 : spread * 1.25;
+  const verticalSweep = flowDirection === 0 ? spread * 1.8 : spread * 1.45;
 
-  return normalizedTargets.map((target, index) => ({
+  return viewportTargets.map((target, index) => ({
     ...target,
     chaosX: directionalOriginX + (random() - 0.5) * directionalSweep,
-    chaosY: bounds.height / 2 + (random() - 0.5) * verticalSweep,
+    chaosY: viewportBounds.height / 2 + (random() - 0.5) * verticalSweep,
     chaosZ: 260 + random() * 720,
     hueShift: index % 3,
   }));
@@ -231,46 +256,71 @@ export function ParticleReveal({
   const frameRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const completedAnimationRef = useRef('');
-  const [bounds, setBounds] = useState<Bounds>({ width: 0, height: 0 });
+  const [viewportBounds, setViewportBounds] = useState<Bounds>({ width: 0, height: 0 });
+  const [targetRect, setTargetRect] = useState<TargetRect>({ left: 0, top: 0, width: 0, height: 0 });
   const [contentVisible, setContentVisible] = useState(false);
+  const [portalHost, setPortalHost] = useState<HTMLElement | null>(null);
   const prefersReducedMotion = useReducedMotion();
   const normalizedRevisionKey = String(revisionKey);
   const animationIdentity = `${normalizedRevisionKey}:${flowDirection}:${shape}:${targetText}`;
   const colors = toneColors[tone];
 
   useLayoutEffect(() => {
+    setPortalHost(document.body);
+  }, []);
+
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return undefined;
 
-    const updateBounds = () => {
+    const updateStageMetrics = () => {
       const rect = container.getBoundingClientRect();
-      setBounds({
+      setViewportBounds({
+        width: Math.max(1, Math.round(window.innerWidth)),
+        height: Math.max(1, Math.round(window.innerHeight)),
+      });
+      setTargetRect({
+        left: Math.round(rect.left),
+        top: Math.round(rect.top),
         width: Math.max(1, Math.round(rect.width)),
         height: Math.max(1, Math.round(rect.height)),
       });
     };
 
-    updateBounds();
-    const observer = new ResizeObserver(updateBounds);
+    updateStageMetrics();
+    window.addEventListener('resize', updateStageMetrics);
+    window.addEventListener('scroll', updateStageMetrics, { passive: true });
+    const observer = new ResizeObserver(updateStageMetrics);
     observer.observe(container);
 
     return () => {
+      window.removeEventListener('resize', updateStageMetrics);
+      window.removeEventListener('scroll', updateStageMetrics);
       observer.disconnect();
     };
   }, []);
 
   const particles = useMemo(() => {
-    if (bounds.width <= 1 || bounds.height <= 1 || prefersReducedMotion) return [];
+    if (
+      viewportBounds.width <= 1
+      || viewportBounds.height <= 1
+      || targetRect.width <= 1
+      || targetRect.height <= 1
+      || prefersReducedMotion
+    ) {
+      return [];
+    }
 
     return createParticles({
-      bounds,
       flowDirection,
       particleCount,
       revisionKey: normalizedRevisionKey,
       shape,
+      targetRect,
       targetText,
+      viewportBounds,
     });
-  }, [bounds, flowDirection, normalizedRevisionKey, particleCount, prefersReducedMotion, shape, targetText]);
+  }, [flowDirection, normalizedRevisionKey, particleCount, prefersReducedMotion, shape, targetRect, targetText, viewportBounds]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -283,16 +333,16 @@ export function ParticleReveal({
 
     if (completedAnimationRef.current === animationIdentity) {
       setContentVisible(true);
-      context.clearRect(0, 0, bounds.width, bounds.height);
+      context.clearRect(0, 0, viewportBounds.width, viewportBounds.height);
       return undefined;
     }
 
     setContentVisible(false);
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.floor(bounds.width * pixelRatio);
-    canvas.height = Math.floor(bounds.height * pixelRatio);
-    canvas.style.width = `${bounds.width}px`;
-    canvas.style.height = `${bounds.height}px`;
+    canvas.width = Math.floor(viewportBounds.width * pixelRatio);
+    canvas.height = Math.floor(viewportBounds.height * pixelRatio);
+    canvas.style.width = `${viewportBounds.width}px`;
+    canvas.style.height = `${viewportBounds.height}px`;
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
     const startedAt = performance.now();
@@ -302,15 +352,15 @@ export function ParticleReveal({
     const render = (now: number) => {
       const progress = clamp((now - startedAt) / duration, 0, 1);
       const eased = easeOutCubic(progress);
-      context.clearRect(0, 0, bounds.width, bounds.height);
+      context.clearRect(0, 0, viewportBounds.width, viewportBounds.height);
 
       particles.forEach((particle) => {
         const x3d = particle.chaosX + (particle.x - particle.chaosX) * eased;
         const y3d = particle.chaosY + (particle.y - particle.chaosY) * eased;
         const z3d = particle.chaosZ + (particle.z - particle.chaosZ) * eased;
         const scale = perspective / (perspective + z3d);
-        const x = bounds.width / 2 + (x3d - bounds.width / 2) * scale;
-        const y = bounds.height / 2 + (y3d - bounds.height / 2) * scale;
+        const x = viewportBounds.width / 2 + (x3d - viewportBounds.width / 2) * scale;
+        const y = viewportBounds.height / 2 + (y3d - viewportBounds.height / 2) * scale;
         const alpha = progress < 0.16 ? progress / 0.16 : 1 - Math.max(0, progress - 0.88) / 0.12;
 
         context.globalAlpha = clamp(alpha, 0, 0.92);
@@ -329,7 +379,7 @@ export function ParticleReveal({
         return;
       }
 
-      context.clearRect(0, 0, bounds.width, bounds.height);
+      context.clearRect(0, 0, viewportBounds.width, viewportBounds.height);
       completedAnimationRef.current = animationIdentity;
       frameRef.current = null;
     };
@@ -342,11 +392,16 @@ export function ParticleReveal({
         frameRef.current = null;
       }
     };
-  }, [animationIdentity, bounds, colors, particles, prefersReducedMotion]);
+  }, [animationIdentity, colors, particles, prefersReducedMotion, viewportBounds]);
 
   return (
     <div ref={containerRef} className={`particle-morph ${className}`}>
-      {!prefersReducedMotion && <canvas ref={canvasRef} className="particle-morph__canvas" aria-hidden="true" />}
+      {!prefersReducedMotion && portalHost
+        ? createPortal(
+          <canvas ref={canvasRef} className="particle-morph__canvas" aria-hidden="true" />,
+          portalHost,
+        )
+        : null}
       <div className="particle-morph__content" style={contentVisible || prefersReducedMotion ? reducedMotionVisibleStyle : undefined}>
         {children}
       </div>

@@ -9,7 +9,7 @@ export default function App() {
     input,
     loading,
     generatingSentence,
-    jumpingGeneratedCharacter,
+    generatedRevealText,
     showSlowMessage,
     inputHint,
     analysisProgress,
@@ -40,7 +40,7 @@ export default function App() {
               input={input}
               loading={loading}
               generatingSentence={generatingSentence}
-              jumpingGeneratedCharacter={jumpingGeneratedCharacter}
+              generatedRevealText={generatedRevealText}
               isBusy={isBusy}
               showSlowMessage={showSlowMessage}
               inputHint={inputHint}

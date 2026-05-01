@@ -8,10 +8,7 @@ interface LandingViewProps {
   input: string;
   loading: boolean;
   generatingSentence: boolean;
-  jumpingGeneratedCharacter: {
-    character: string;
-    index: number;
-  } | null;
+  generatedRevealText: string;
   isBusy: boolean;
   showSlowMessage: boolean;
   inputHint: string;
@@ -28,7 +25,7 @@ export function LandingView({
   input,
   loading,
   generatingSentence,
-  jumpingGeneratedCharacter,
+  generatedRevealText,
   isBusy,
   showSlowMessage,
   inputHint,
@@ -42,13 +39,13 @@ export function LandingView({
 }: LandingViewProps) {
   const sentenceTextarea = (
     <div className="relative">
-      <PretextJumpText active={Boolean(jumpingGeneratedCharacter)} text={input} />
+      <PretextJumpText revealText={generatedRevealText} />
       <textarea
         value={input}
         onChange={(event) => {
           onInputChange(event.target.value);
         }}
-        placeholder="Enter a complex English sentence here..."
+        placeholder={generatedRevealText ? '' : 'Enter a complex English sentence here...'}
         className="w-full h-44 md:h-64 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-2xl text-ink placeholder:text-zinc-300 resize-none font-medium leading-normal pr-5 [scrollbar-gutter:stable]"
         id="sentence-input"
       />
@@ -180,9 +177,9 @@ export function LandingView({
 
       <ParticleReveal
         particleCount={7000}
-        revisionKey={`landing-actions-${analysisReady ? 'ready' : 'idle'}`}
+        revisionKey="landing-actions"
         shape="text-card"
-        targetText={analysisReady ? 'Start breakdown Generate another example' : 'Generate an example Analyze this sentence'}
+        targetText="Generate an example Analyze this sentence Start breakdown"
         tone="blue"
       >
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

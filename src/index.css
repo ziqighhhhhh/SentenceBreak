@@ -33,9 +33,11 @@
   }
 
   .particle-morph__canvas {
-    position: absolute;
+    position: fixed;
     inset: 0;
-    z-index: 20;
+    z-index: 30;
+    width: 100vw;
+    height: 100vh;
     pointer-events: none;
   }
 
@@ -46,43 +48,16 @@
     transition: opacity 240ms ease-out;
   }
 
-  .pretext-layout-layer {
+  .pretext-canvas-reveal-layer {
     position: absolute;
     inset: 0;
-    z-index: 2;
+    z-index: 20;
     overflow: hidden;
     pointer-events: none;
   }
 
-  .pretext-current-letter {
-    position: absolute;
-    color: var(--color-ink);
-    font-size: 1.5rem;
-    font-weight: 500;
-    line-height: 1.5;
-  }
-
-  .pretext-current-letter__glyph {
-    animation: pretext-letter-jump 360ms cubic-bezier(0.2, 1.35, 0.32, 1) both;
-    display: inline-block;
-    transform-origin: 50% 75%;
-  }
-}
-
-@keyframes pretext-letter-jump {
-  0% {
-    opacity: 0;
-    transform: translate3d(0, -18px, 0) rotate(-4deg) scale(0.86);
-  }
-
-  58% {
-    opacity: 1;
-    transform: translate3d(0, 4px, 0) rotate(1.5deg) scale(1.03);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  .pretext-canvas-reveal {
+    display: block;
   }
 }
 
@@ -91,11 +66,7 @@
     opacity: 1;
   }
 
-  .pretext-jump-letter {
-    animation: none;
-  }
-
-  .pretext-current-letter__glyph {
-    animation: none;
+  .pretext-canvas-reveal-layer {
+    display: none;
   }
 }

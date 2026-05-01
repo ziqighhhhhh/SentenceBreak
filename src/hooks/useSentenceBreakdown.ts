@@ -9,6 +9,19 @@ export interface ErrorNotice {
   action: ErrorAction;
 }
 
+const GENERATED_LINE_REVEAL_BASE_MS = 1000;
+const GENERATED_LINE_REVEAL_DELAY_MS = 170;
+const GENERATED_LINE_REVEAL_FALLBACK_LINES = 4;
+
+function estimateRevealDuration(sentence: string): number {
+  const estimatedLineCount = Math.max(
+    1,
+    Math.min(8, Math.ceil(sentence.length / 72) || GENERATED_LINE_REVEAL_FALLBACK_LINES),
+  );
+
+  return GENERATED_LINE_REVEAL_BASE_MS + GENERATED_LINE_REVEAL_DELAY_MS * Math.max(0, estimatedLineCount - 1);
+}
+
 function hasChineseText(value: string): boolean {
   return /[\u3400-\u9FFF\uF900-\uFAFF]/.test(value);
 }
@@ -50,10 +63,7 @@ export function useSentenceBreakdown() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatingSentence, setGeneratingSentence] = useState(false);
-  const [jumpingGeneratedCharacter, setJumpingGeneratedCharacter] = useState<{
-    character: string;
-    index: number;
-  } | null>(null);
+  const [generatedRevealText, setGeneratedRevealText] = useState('');
   const [showSlowMessage, setShowSlowMessage] = useState(false);
   const [inputHint, setInputHint] = useState('');
   const [analysisProgress, setAnalysisProgress] = useState('');
@@ -73,37 +83,25 @@ export function useSentenceBreakdown() {
   const isSummary = breakdown && currentStepIdx === breakdown.steps.length;
 
   const clearGeneratedSentenceTimer = useCallback(() => {
-    if (generatedSentenceTimerRef.current === null) return;
+    if (generatedSentenceTimerRef.current !== null) {
+      window.clearTimeout(generatedSentenceTimerRef.current);
+      generatedSentenceTimerRef.current = null;
+    }
 
-    window.clearInterval(generatedSentenceTimerRef.current);
-    generatedSentenceTimerRef.current = null;
+    setGeneratedRevealText('');
   }, []);
 
   const revealGeneratedSentence = useCallback((sentence: string) => {
     clearGeneratedSentenceTimer();
 
-    const characters = Array.from(sentence);
-    const characterDelay = sentence.length > 180 ? 14 : sentence.length > 100 ? 18 : 24;
-    let characterIndex = 0;
-
     setInput('');
-    setJumpingGeneratedCharacter(null);
+    setGeneratedRevealText(sentence);
 
-    generatedSentenceTimerRef.current = window.setInterval(() => {
-      characterIndex += 1;
-      setInput(characters.slice(0, characterIndex).join(''));
-      setJumpingGeneratedCharacter({
-        character: characters[characterIndex - 1] ?? '',
-        index: characterIndex,
-      });
-
-      if (characterIndex >= characters.length) {
-        clearGeneratedSentenceTimer();
-        window.setTimeout(() => {
-          setJumpingGeneratedCharacter(null);
-        }, 220);
-      }
-    }, characterDelay);
+    generatedSentenceTimerRef.current = window.setTimeout(() => {
+      setInput(sentence);
+      setGeneratedRevealText('');
+      generatedSentenceTimerRef.current = null;
+    }, estimateRevealDuration(sentence));
   }, [clearGeneratedSentenceTimer]);
 
   const cacheBreakdownForInput = useCallback(async (sentence: string, options: { silent?: boolean } = {}) => {
@@ -161,11 +159,10 @@ export function useSentenceBreakdown() {
     };
 
     try {
-      const data = await analysisPromise;
+        const data = await analysisPromise;
       if (pendingAnalysisRef.current?.promise === analysisPromise) {
         setCachedBreakdown(data);
         cachedBreakdownInputRef.current = trimmedSentence;
-        setInputHint('Analysis ready. Start the breakdown when you are ready.');
         setExpandedSummarySteps(new Set());
         setSlideDirection(1);
         setCurrentStepIdx(-1);
@@ -211,7 +208,6 @@ export function useSentenceBreakdown() {
 
   const handleInputChange = useCallback((value: string) => {
     clearGeneratedSentenceTimer();
-    setJumpingGeneratedCharacter(null);
     setInput(value);
     setCachedBreakdown(null);
     cachedBreakdownInputRef.current = '';
@@ -260,7 +256,6 @@ export function useSentenceBreakdown() {
 
   const handleGenerateSentence = useCallback(async () => {
     clearGeneratedSentenceTimer();
-    setJumpingGeneratedCharacter(null);
     setInputHint('');
     setCachedBreakdown(null);
     cachedBreakdownInputRef.current = '';
@@ -275,7 +270,6 @@ export function useSentenceBreakdown() {
         streamedSentence += token;
       });
       revealGeneratedSentence(sentence);
-      setInputHint('Example generated. Review it, then start when ready.');
       void cacheBreakdownForInput(sentence, { silent: true });
     } catch (err) {
       setErrorNotice({ message: getFriendlyErrorMessage(err, 'generate'), action: 'generate' });
@@ -321,7 +315,6 @@ export function useSentenceBreakdown() {
 
   const reset = useCallback(() => {
     clearGeneratedSentenceTimer();
-    setJumpingGeneratedCharacter(null);
     setBreakdown(null);
     setCachedBreakdown(null);
     cachedBreakdownInputRef.current = '';
@@ -424,7 +417,7 @@ export function useSentenceBreakdown() {
     input,
     loading,
     generatingSentence,
-    jumpingGeneratedCharacter,
+    generatedRevealText,
     showSlowMessage,
     inputHint,
     analysisProgress,

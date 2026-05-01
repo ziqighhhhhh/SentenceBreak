@@ -1,9 +1,8 @@
 import { layoutWithLines, measureNaturalWidth, prepareWithSegments } from '@chenglou/pretext';
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 interface PretextJumpTextProps {
-  active: boolean;
-  text: string;
+  revealText: string;
 }
 
 const TEXTAREA_SCROLLBAR_GUTTER = 20;
@@ -11,18 +10,32 @@ const TEXTAREA_SCROLLBAR_GUTTER = 20;
 interface TextareaMetrics {
   contentWidth: number;
   font: string;
+  height: number;
   lineHeight: number;
   paddingLeft: number;
   paddingTop: number;
+  width: number;
+}
+
+interface RevealLine {
+  text: string;
+  top: number;
+  width: number;
 }
 
 const emptyMetrics: TextareaMetrics = {
   contentWidth: 0,
   font: '',
+  height: 0,
   lineHeight: 0,
   paddingLeft: 0,
   paddingTop: 0,
+  width: 0,
 };
+
+function easeOutCubic(value: number): number {
+  return 1 - Math.pow(1 - value, 3);
+}
 
 function measureTextWidth(text: string, font: string): number {
   if (!text) return 0;
@@ -45,22 +58,28 @@ function getTextareaMetrics(container: HTMLDivElement): TextareaMetrics {
   const font = styles.font;
   const lineHeight =
     Number.parseFloat(styles.lineHeight) || Number.parseFloat(styles.fontSize) * 1.5 || 0;
+  const width = Math.max(1, textarea.clientWidth);
+  const height = Math.max(1, textarea.clientHeight);
   const contentWidth = Math.max(
     1,
-    Math.floor(textarea.clientWidth - paddingLeft - paddingRight - TEXTAREA_SCROLLBAR_GUTTER),
+    Math.floor(width - paddingLeft - paddingRight - TEXTAREA_SCROLLBAR_GUTTER),
   );
 
   return {
     contentWidth,
     font,
+    height,
     lineHeight,
     paddingLeft,
     paddingTop,
+    width,
   };
 }
 
-export function PretextJumpText({ active, text }: PretextJumpTextProps) {
+export function PretextJumpText({ revealText }: PretextJumpTextProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const frameRef = useRef<number | null>(null);
   const [metrics, setMetrics] = useState<TextareaMetrics>(emptyMetrics);
 
   useLayoutEffect(() => {
@@ -82,51 +101,90 @@ export function PretextJumpText({ active, text }: PretextJumpTextProps) {
     };
   }, []);
 
-  const jumpTarget = useMemo(() => {
-    if (!active || !text || metrics.contentWidth <= 0 || !metrics.font || metrics.lineHeight <= 0) {
-      return null;
+  const revealLines = useMemo<RevealLine[]>(() => {
+    if (!revealText || metrics.contentWidth <= 0 || !metrics.font || metrics.lineHeight <= 0) {
+      return [];
     }
 
-    const textCharacters = Array.from(text);
-    const character = textCharacters[textCharacters.length - 1] ?? '';
-    if (!character.trim()) return null;
-
-    const prepared = prepareWithSegments(text, metrics.font, {
+    const prepared = prepareWithSegments(revealText, metrics.font, {
       whiteSpace: 'pre-wrap',
     });
     const { lines } = layoutWithLines(prepared, metrics.contentWidth, metrics.lineHeight);
-    const lineIndex = Math.max(0, lines.length - 1);
-    const line = lines[lineIndex];
-    if (!line) return null;
 
-    const lineCharacters = Array.from(line.text);
-    const prefix = lineCharacters.slice(0, -1).join('');
+    return lines.map((line, index) => ({
+      text: line.text,
+      top: metrics.paddingTop + index * metrics.lineHeight,
+      width: measureTextWidth(line.text, metrics.font),
+    }));
+  }, [metrics, revealText]);
 
-    return {
-      character,
-      font: metrics.font,
-      left: metrics.paddingLeft + measureTextWidth(prefix, metrics.font),
-      lineHeight: metrics.lineHeight,
-      top: metrics.paddingTop + lineIndex * metrics.lineHeight,
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext('2d');
+
+    if (!canvas || !context || !revealText || revealLines.length === 0 || metrics.width <= 0 || metrics.height <= 0) {
+      return undefined;
+    }
+
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(metrics.width * pixelRatio);
+    canvas.height = Math.floor(metrics.height * pixelRatio);
+    canvas.style.width = `${metrics.width}px`;
+    canvas.style.height = `${metrics.height}px`;
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    context.font = metrics.font;
+    context.textAlign = 'left';
+    context.textBaseline = 'top';
+    context.fillStyle = '#1d1d1f';
+
+    const startedAt = performance.now();
+    const lineDelay = 170;
+    const lineDuration = 1000;
+    const totalDuration = lineDelay * Math.max(0, revealLines.length - 1) + lineDuration;
+
+    const render = (now: number) => {
+      const elapsed = now - startedAt;
+      context.clearRect(0, 0, metrics.width, metrics.height);
+
+      revealLines.forEach((line, index) => {
+        const lineProgress = Math.min(1, Math.max(0, (elapsed - index * lineDelay) / lineDuration));
+        if (lineProgress <= 0) return;
+
+        const eased = easeOutCubic(lineProgress);
+        const visibleWidth = Math.ceil(line.width * eased);
+        const yOffset = (1 - eased) * 8;
+
+        context.save();
+        context.globalAlpha = Math.min(1, lineProgress * 1.8);
+        context.beginPath();
+        context.rect(metrics.paddingLeft, line.top - 2, visibleWidth, metrics.lineHeight + 4);
+        context.clip();
+        context.fillText(line.text, metrics.paddingLeft, line.top + yOffset);
+        context.restore();
+      });
+
+      if (elapsed < totalDuration) {
+        frameRef.current = window.requestAnimationFrame(render);
+        return;
+      }
+
+      frameRef.current = null;
     };
-  }, [active, text, metrics]);
+
+    frameRef.current = window.requestAnimationFrame(render);
+
+    return () => {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+      context.clearRect(0, 0, metrics.width, metrics.height);
+    };
+  }, [metrics, revealLines, revealText]);
 
   return (
-    <div ref={containerRef} className="pretext-layout-layer" aria-hidden="true">
-      {jumpTarget && (
-        <span
-          key={`${text.length}-${jumpTarget.character}`}
-          className="pretext-current-letter"
-          style={{
-            font: jumpTarget.font,
-            left: `${jumpTarget.left}px`,
-            lineHeight: `${jumpTarget.lineHeight}px`,
-            top: `${jumpTarget.top}px`,
-          }}
-        >
-          <span className="pretext-current-letter__glyph">{jumpTarget.character}</span>
-        </span>
-      )}
+    <div ref={containerRef} className="pretext-canvas-reveal-layer" aria-hidden="true">
+      <canvas ref={canvasRef} className="pretext-canvas-reveal" />
     </div>
   );
 }

@@ -49,10 +49,10 @@ export function BreakdownPager({
     <>
       <motion.div
         key={`step-${currentStepIdx}`}
-        initial={{ opacity: 0, x: slideDirection * 180, scale: 0.98 }}
-        animate={{ opacity: 1, x: 0, scale: 1 }}
-        exit={{ opacity: 0, x: slideDirection * -180, scale: 0.98 }}
-        transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
         className="relative w-full max-w-[min(1440px,calc(100vw-48px))]"
       >
         <div className="mb-8 flex flex-wrap items-center justify-center gap-1" aria-label="Breakdown progress">
