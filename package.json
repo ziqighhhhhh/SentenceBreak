@@ -12,7 +12,7 @@
     "start": "node dist-server/server.js",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test": "npm run build:server && node tests/openaiStream.test.mjs",
+    "test": "npm run build:server && node tests/openaiStream.test.mjs && node tests/vocabulary.test.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push"
