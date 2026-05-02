@@ -1,10 +1,11 @@
-import type { MasteryStatus, SavedLearningSession, SavedVocabularyEntry, SentenceBreakdown } from '../types';
+import type { MasteryStatus, SavedLearningSession, SavedVocabularyEntry, SentenceBreakdown, UserRole } from '../types';
 
 export interface BetaSession {
   token: string;
   user: {
     id: string;
     nickname: string;
+    role: UserRole;
   };
   expiresAt: string;
 }
@@ -50,6 +51,7 @@ function isBetaSession(value: unknown): value is BetaSession {
     && Boolean(candidate.user)
     && typeof candidate.user?.id === 'string'
     && typeof candidate.user?.nickname === 'string'
+    && typeof candidate.user?.role === 'string'
   );
 }
 

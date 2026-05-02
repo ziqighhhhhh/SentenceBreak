@@ -9,11 +9,21 @@ export interface AuthenticatedRequest extends Request {
   userId?: string;
 }
 
-export function isInviteCodeAllowed(
+export async function isInviteCodeAllowed(
   inviteCode: string,
   configuredCodes = process.env.BETA_INVITE_CODES || "",
-): boolean {
+): Promise<boolean> {
   const normalizedInviteCode = inviteCode.trim();
+
+  try {
+    const prisma = await getPrisma();
+    const record = await prisma.inviteCode.findUnique({ where: { code: normalizedInviteCode } });
+    if (record) {
+      return true;
+    }
+  } catch {
+    // Database unavailable, fall through to env check
+  }
 
   return configuredCodes
     .split(",")
@@ -49,7 +59,7 @@ export async function createOrResumeBetaSession(inviteCodeInput: unknown, nickna
   const inviteCode = assertNonEmptyString(inviteCodeInput, "Invite code", 80);
   const nickname = validateNickname(nicknameInput);
 
-  if (!isInviteCodeAllowed(inviteCode)) {
+  if (!(await isInviteCodeAllowed(inviteCode))) {
     throw new Error("Invalid invite code.");
   }
 
@@ -70,7 +80,7 @@ export async function createOrResumeBetaSession(inviteCodeInput: unknown, nickna
 
   return {
     token: rawToken,
-    user: { id: user.id, nickname: user.nickname },
+    user: { id: user.id, nickname: user.nickname, role: user.role },
     expiresAt: expiresAt.toISOString(),
   };
 }
@@ -113,4 +123,26 @@ export async function requireAuth(
   } catch (error) {
     next(error);
   }
+}
+
+export async function requireAdmin(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  await requireAuth(req, res, async () => {
+    try {
+      const prisma = await getPrisma();
+      const user = await prisma.testUser.findUnique({ where: { id: req.userId } });
+
+      if (!user || user.role !== "admin") {
+        res.status(403).json({ error: "Admin access required." });
+        return;
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  });
 }

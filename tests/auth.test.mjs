@@ -6,9 +6,9 @@ import {
   validateNickname,
 } from "../dist-server/server/auth.js";
 
-test("accepts invite codes from comma-separated environment list", () => {
-  assert.equal(isInviteCodeAllowed("alpha2026", "alpha2026,beta2026"), true);
-  assert.equal(isInviteCodeAllowed("wrong", "alpha2026,beta2026"), false);
+test("accepts invite codes from comma-separated environment list", async () => {
+  assert.equal(await isInviteCodeAllowed("alpha2026", "alpha2026,beta2026"), true);
+  assert.equal(await isInviteCodeAllowed("wrong", "alpha2026,beta2026"), false);
 });
 
 test("validates nickname", () => {

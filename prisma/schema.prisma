@@ -7,16 +7,25 @@ datasource db {
 }
 
 model TestUser {
-  id               String            @id @default(cuid())
-  inviteCode       String
-  nickname         String
-  createdAt        DateTime          @default(now())
-  lastSeenAt       DateTime          @updatedAt
-  authSessions     AuthSession[]
-  learningSessions LearningSession[]
+  id                String            @id @default(cuid())
+  inviteCode        String
+  nickname          String
+  role              String            @default("user")
+  createdAt         DateTime          @default(now())
+  lastSeenAt        DateTime          @updatedAt
+  authSessions      AuthSession[]
+  learningSessions  LearningSession[]
   vocabularyEntries VocabularyEntry[]
+  createdInviteCodes InviteCode[]
 
   @@unique([inviteCode, nickname])
+}
+
+model InviteCode {
+  code              String    @id
+  createdAt         DateTime  @default(now())
+  createdByUserId   String
+  createdBy         TestUser  @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
 }
 
 model AuthSession {

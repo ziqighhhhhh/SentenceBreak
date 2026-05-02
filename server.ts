@@ -3,6 +3,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 import path from "path";
 import { fileURLToPath } from "url";
 import { learningRoutes } from "./server/learningRoutes.js";
+import { adminRoutes, seedInviteCodes } from "./server/adminRoutes.js";
 import { resolveClientDistPath } from "./server/paths.js";
 import { formatSseEvent } from "./server/sse.js";
 import { generateBreakdownOnServer, generateComplexSentenceOnServer, streamBreakdownOnServer, streamComplexSentenceOnServer } from "./server/webai.js";
@@ -102,6 +103,7 @@ function readSentence(body: unknown): string {
 }
 
 app.use("/api", rateLimit, learningRoutes);
+app.use("/api/admin", rateLimit, adminRoutes);
 
 app.post("/api/breakdown", rateLimit, async (req: Request, res: Response) => {
   try {
@@ -209,6 +211,12 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: "Internal server error." });
 });
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`SentenceBreak server listening on http://0.0.0.0:${port}`);
+  try {
+    await seedInviteCodes();
+    console.log("Invite codes seeded.");
+  } catch (error) {
+    console.error("Seed failed:", error instanceof Error ? error.message : error);
+  }
 });

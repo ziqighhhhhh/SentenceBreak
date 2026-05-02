@@ -1,15 +1,17 @@
 import { AnimatePresence } from 'motion/react';
-import { BookOpen, LogOut, PenLine } from 'lucide-react';
+import { BookOpen, LogOut, PenLine, Shield } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { AdminView } from './components/AdminView';
 import { BreakdownPager } from './components/BreakdownPager';
 import { BetaLoginView } from './components/BetaLoginView';
 import { LandingView } from './components/LandingView';
 import { MyLearningView } from './components/MyLearningView';
+import { useAdmin } from './hooks/useAdmin';
 import { useBetaSession } from './hooks/useBetaSession';
 import { useLearningRecords } from './hooks/useLearningRecords';
 import { useSentenceBreakdown } from './hooks/useSentenceBreakdown';
 
-type AppView = 'breakdown' | 'learning';
+type AppView = 'breakdown' | 'learning' | 'admin';
 
 export default function App() {
   const betaSession = useBetaSession();
@@ -52,6 +54,9 @@ export default function App() {
     goToPage,
     toggleSummaryStep,
   } = sentenceBreakdown;
+
+  const isAdmin = betaSession.session?.user?.role === 'admin';
+  const admin = useAdmin(isAdmin ? betaSession.session?.token ?? null : null);
 
   useEffect(() => {
     if (breakdown && betaSession.session) {
@@ -125,6 +130,21 @@ export default function App() {
               <BookOpen size={16} />
               My Learning
             </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setActiveView('admin')}
+                aria-pressed={activeView === 'admin'}
+                className={`inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-bold transition-all ${
+                  activeView === 'admin'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-ink-muted hover:bg-zinc-100 hover:text-ink'
+                }`}
+              >
+                <Shield size={16} />
+                Admin
+              </button>
+            )}
           </nav>
 
           <div className="flex items-center gap-3">
@@ -144,7 +164,20 @@ export default function App() {
       </header>
 
       <main className={`flex-grow flex flex-col items-center px-4 ${breakdown && activeView === 'breakdown' ? 'justify-start py-12 pb-28 md:justify-center md:py-20' : 'justify-center py-10 md:py-16'}`}>
-        {activeView === 'learning' ? (
+        {activeView === 'admin' ? (
+          <AdminView
+            inviteCodes={admin.inviteCodes}
+            users={admin.users}
+            loading={admin.loading}
+            error={admin.error}
+            generateCount={admin.generateCount}
+            onGenerateCountChange={admin.setGenerateCount}
+            onGenerate={() => { void admin.handleGenerate(); }}
+            onDeleteCode={(code) => { void admin.handleDelete(code); }}
+            onUpdateRole={(userId, role) => { void admin.handleUpdateRole(userId, role); }}
+            onReload={() => { void admin.loadData(); }}
+          />
+        ) : activeView === 'learning' ? (
           <MyLearningView
             sessions={sessions}
             vocabulary={vocabulary}

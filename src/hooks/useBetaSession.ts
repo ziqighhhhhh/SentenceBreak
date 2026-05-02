@@ -16,6 +16,7 @@ function isStoredBetaSession(value: unknown): value is BetaSession {
     && Boolean(candidate.user)
     && typeof candidate.user?.id === 'string'
     && typeof candidate.user?.nickname === 'string'
+    && typeof candidate.user?.role === 'string'
   );
 }
 

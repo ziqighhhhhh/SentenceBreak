@@ -34,6 +34,23 @@ export interface SentenceBreakdown {
 
 export type MasteryStatus = 'new' | 'reviewing' | 'mastered';
 
+export type UserRole = 'admin' | 'user';
+
+export interface AdminInviteCode {
+  code: string;
+  createdAt: string;
+  createdByNickname: string;
+}
+
+export interface AdminUser {
+  id: string;
+  inviteCode: string;
+  nickname: string;
+  role: UserRole;
+  createdAt: string;
+  lastSeenAt: string;
+}
+
 export interface SavedLearningSession {
   id: string;
   sourceSentence: string;
