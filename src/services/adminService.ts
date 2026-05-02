@@ -57,3 +57,11 @@ export async function updateUserRole(token: string, id: string, role: UserRole):
   });
   await readJsonResponse<ApiErrorResponse>(response, 'Unable to update user role.');
 }
+
+export async function deleteUser(token: string, id: string): Promise<void> {
+  const response = await fetch(`/api/admin/users/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  await readJsonResponse<ApiErrorResponse>(response, 'Unable to delete user.');
+}

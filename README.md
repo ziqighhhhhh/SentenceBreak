@@ -82,6 +82,7 @@ WEBAI2API_API_KEY="YOUR_TOKEN"
 WEBAI2API_MODEL="gemini-2.0-flash"
 PORT="8787"
 RATE_LIMIT_PER_MINUTE="20"
+ADMIN_RATE_LIMIT_PER_MINUTE="120"
 DATABASE_URL="file:./data/sentencebreak.db"
 BETA_INVITE_CODES="alpha2026,beta2026"
 API_PROXY_TARGET="http://localhost:8787"
@@ -176,7 +177,7 @@ Streaming endpoints use Server-Sent Events. The frontend uses the streaming vari
 The server:
 
 - Limits JSON request size.
-- Applies per-IP rate limiting.
+- Applies per-IP rate limiting with separate counters for admin, learning-record, and AI-analysis routes.
 - Rejects empty, non-string, oversized, or Chinese-containing sentence input.
 - Validates beta invite sessions before reading or writing learning records.
 - Keeps each user's learning sessions and vocabulary isolated by server-derived user identity.

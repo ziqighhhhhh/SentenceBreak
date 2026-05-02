@@ -9,10 +9,12 @@ interface AdminViewProps {
   loading: boolean;
   error: string;
   generateCount: number;
+  currentUserId: string | null;
   onGenerateCountChange: (count: number) => void;
   onGenerate: () => void;
   onDeleteCode: (code: string) => void;
   onUpdateRole: (userId: string, role: UserRole) => void;
+  onDeleteUser: (userId: string) => void;
   onReload: () => void;
 }
 
@@ -31,10 +33,12 @@ export function AdminView({
   loading,
   error,
   generateCount,
+  currentUserId,
   onGenerateCountChange,
   onGenerate,
   onDeleteCode,
   onUpdateRole,
+  onDeleteUser,
   onReload,
 }: AdminViewProps) {
   return (
@@ -77,7 +81,12 @@ export function AdminView({
             onGenerate={onGenerate}
             onDelete={onDeleteCode}
           />
-          <UsersSection users={users} onUpdateRole={onUpdateRole} />
+          <UsersSection
+            users={users}
+            currentUserId={currentUserId}
+            onUpdateRole={onUpdateRole}
+            onDeleteUser={onDeleteUser}
+          />
         </div>
       )}
     </motion.section>
@@ -171,10 +180,14 @@ function InviteCodesSection({
 
 function UsersSection({
   users,
+  currentUserId,
   onUpdateRole,
+  onDeleteUser,
 }: {
   users: AdminUser[];
+  currentUserId: string | null;
   onUpdateRole: (userId: string, role: UserRole) => void;
+  onDeleteUser: (userId: string) => void;
 }) {
   return (
     <div className="rounded-[24px] border border-hairline bg-white p-6 shadow-[3px_5px_30px_rgba(0,0,0,0.08)] sm:p-8">
@@ -221,18 +234,33 @@ function UsersSection({
                   </td>
                   <td className="py-3 pr-4 font-medium text-ink-muted">{formatDate(u.lastSeenAt)}</td>
                   <td className="py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onUpdateRole(u.id, u.role === 'admin' ? 'user' : 'admin')}
-                      className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition-all ${
-                        u.role === 'admin'
-                          ? 'bg-zinc-100 text-ink-muted hover:bg-red-50 hover:text-red-600'
-                          : 'bg-primary/10 text-primary hover:bg-primary/20'
-                      }`}
-                    >
-                      <Shield size={11} />
-                      {u.role === 'admin' ? 'Demote' : 'Promote'}
-                    </button>
+                    <div className="inline-flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onUpdateRole(u.id, u.role === 'admin' ? 'user' : 'admin')}
+                        className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition-all ${
+                          u.role === 'admin'
+                            ? 'bg-zinc-100 text-ink-muted hover:bg-red-50 hover:text-red-600'
+                            : 'bg-primary/10 text-primary hover:bg-primary/20'
+                        }`}
+                      >
+                        <Shield size={11} />
+                        {u.role === 'admin' ? 'Demote' : 'Promote'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const confirmed = window.confirm(`Delete ${u.nickname}? This will remove their sessions and learning records.`);
+                          if (confirmed) onDeleteUser(u.id);
+                        }}
+                        disabled={u.id === currentUserId}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition-all hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-ink-muted"
+                        aria-label={`Delete user ${u.nickname}`}
+                        title={u.id === currentUserId ? 'You cannot delete your own account.' : `Delete ${u.nickname}`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

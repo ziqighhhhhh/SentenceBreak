@@ -5,7 +5,6 @@ import test from "node:test";
 process.env.DATABASE_URL = process.env.DATABASE_URL || "file:./data/test.db";
 
 const { prisma } = await import("../dist-server/server/db.js");
-const { requireAdmin, type AuthenticatedRequest } = await import("../dist-server/server/auth.js");
 
 const BASE = `http://localhost:${process.env.PORT || 8787}`;
 
@@ -13,18 +12,18 @@ let adminToken = "";
 let adminUserId = "";
 let regularToken = "";
 
-async function createTestUser(suffix: string, role: string) {
+async function createTestUser(suffix, role) {
   const inviteCode = `test-admin-${suffix}`;
   const nickname = `tester-${suffix}`;
-  await prisma.inviteCode.upsert({
-    where: { code: inviteCode },
-    create: { code: inviteCode, createdByUserId: "system" },
-    update: {},
-  });
   const user = await prisma.testUser.upsert({
-    where: { inviteCode_nickname: { inviteCode, nickname } },
+    where: { inviteCode },
     create: { inviteCode, nickname, role },
     update: { role },
+  });
+  await prisma.inviteCode.upsert({
+    where: { code: inviteCode },
+    create: { code: inviteCode, createdByUserId: user.id },
+    update: { createdByUserId: user.id },
   });
   const { hashSessionToken, createRawSessionToken } = await import("../dist-server/server/auth.js");
   const rawToken = createRawSessionToken();
@@ -104,7 +103,7 @@ test("admin can list users", async () => {
   assert.equal(res.status, 200);
   const data = await res.json();
   assert.ok(Array.isArray(data.users));
-  const admin = data.users.find((u: { id: string }) => u.id === adminUserId);
+  const admin = data.users.find((u) => u.id === adminUserId);
   assert.ok(admin);
   assert.equal(admin.role, "admin");
 });
@@ -123,6 +122,32 @@ test("admin can update user role", async () => {
   assert.equal(data.role, "admin");
 });
 
+test("admin can delete another user", async () => {
+  const suffix = randomUUID();
+  const { userId } = await createTestUser(suffix, "user");
+
+  const res = await fetch(`${BASE}/api/admin/users/${userId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  assert.equal(res.status, 200);
+  const data = await res.json();
+  assert.equal(data.deleted, true);
+
+  const user = await prisma.testUser.findUnique({ where: { id: userId } });
+  assert.equal(user, null);
+});
+
+test("admin cannot delete their own account", async () => {
+  const res = await fetch(`${BASE}/api/admin/users/${adminUserId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  assert.equal(res.status, 400);
+  const data = await res.json();
+  assert.equal(data.error, "You cannot delete your own account.");
+});
+
 test("generate rejects invalid count", async () => {
   const res = await fetch(`${BASE}/api/admin/invite-codes`, {
     method: "POST",
@@ -136,6 +161,14 @@ test("generate rejects invalid count", async () => {
 
 test("delete nonexistent code returns 404", async () => {
   const res = await fetch(`${BASE}/api/admin/invite-codes/nonexistent`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${adminToken}` },
+  });
+  assert.equal(res.status, 404);
+});
+
+test("delete nonexistent user returns 404", async () => {
+  const res = await fetch(`${BASE}/api/admin/users/nonexistent`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${adminToken}` },
   });

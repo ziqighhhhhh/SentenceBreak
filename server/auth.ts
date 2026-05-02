@@ -34,12 +34,13 @@ export async function isInviteCodeAllowed(
 
 export function validateNickname(value: unknown): string {
   const nickname = assertNonEmptyString(value, "Nickname", 40);
+  const normalizedNickname = nickname.toLowerCase();
 
-  if (!/^[\p{L}\p{N}_ -]+$/u.test(nickname)) {
+  if (!/^[\p{L}\p{N}_ -]+$/u.test(normalizedNickname)) {
     throw new Error("Nickname contains unsupported characters.");
   }
 
-  return nickname;
+  return normalizedNickname;
 }
 
 export function hashSessionToken(token: string): string {
@@ -64,11 +65,20 @@ export async function createOrResumeBetaSession(inviteCodeInput: unknown, nickna
   }
 
   const prisma = await getPrisma();
-  const user = await prisma.testUser.upsert({
-    where: { inviteCode_nickname: { inviteCode, nickname } },
-    create: { inviteCode, nickname },
-    update: { lastSeenAt: new Date() },
-  });
+  const existingUser = await prisma.testUser.findUnique({ where: { inviteCode } });
+
+  if (existingUser && existingUser.nickname.toLowerCase() !== nickname) {
+    throw new Error("Invite code has already been claimed.");
+  }
+
+  const user = existingUser
+    ? await prisma.testUser.update({
+        where: { id: existingUser.id },
+        data: { lastSeenAt: new Date(), nickname },
+      })
+    : await prisma.testUser.create({
+        data: { inviteCode, nickname },
+      });
 
   const rawToken = createRawSessionToken();
   const tokenHash = hashSessionToken(rawToken);

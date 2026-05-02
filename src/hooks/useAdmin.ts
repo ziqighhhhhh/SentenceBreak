@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AdminInviteCode, AdminUser, UserRole } from '../types';
-import { deleteInviteCode, generateInviteCodes, listInviteCodes, listUsers, updateUserRole } from '../services/adminService';
+import { deleteInviteCode, deleteUser, generateInviteCodes, listInviteCodes, listUsers, updateUserRole } from '../services/adminService';
 
 export function useAdmin(token: string | null) {
   const [inviteCodes, setInviteCodes] = useState<AdminInviteCode[]>([]);
@@ -61,6 +61,17 @@ export function useAdmin(token: string | null) {
     }
   }, [token]);
 
+  const handleDeleteUser = useCallback(async (userId: string) => {
+    if (!token) return;
+    setError('');
+    try {
+      await deleteUser(token, userId);
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete user.');
+    }
+  }, [token]);
+
   return useMemo(
     () => ({
       inviteCodes,
@@ -73,7 +84,8 @@ export function useAdmin(token: string | null) {
       handleGenerate,
       handleDelete,
       handleUpdateRole,
+      handleDeleteUser,
     }),
-    [inviteCodes, users, loading, error, generateCount, loadData, handleGenerate, handleDelete, handleUpdateRole],
+    [inviteCodes, users, loading, error, generateCount, loadData, handleGenerate, handleDelete, handleUpdateRole, handleDeleteUser],
   );
 }

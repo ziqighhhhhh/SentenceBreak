@@ -193,10 +193,12 @@ export default function App() {
             loading={admin.loading}
             error={admin.error}
             generateCount={admin.generateCount}
+            currentUserId={betaSession.session?.user.id ?? null}
             onGenerateCountChange={admin.setGenerateCount}
             onGenerate={() => { void admin.handleGenerate(); }}
             onDeleteCode={(code) => { void admin.handleDelete(code); }}
             onUpdateRole={(userId, role) => { void admin.handleUpdateRole(userId, role); }}
+            onDeleteUser={(userId) => { void admin.handleDeleteUser(userId); }}
             onReload={() => { void admin.loadData(); }}
           />
         ) : activeView === 'learning' ? (

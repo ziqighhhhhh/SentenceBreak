@@ -134,6 +134,25 @@ adminRoutes.patch(
   }),
 );
 
+adminRoutes.delete(
+  "/users/:id",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    if (req.params.id === req.userId) {
+      res.status(400).json({ error: "You cannot delete your own account." });
+      return;
+    }
+
+    const deleted = await prisma.testUser.deleteMany({ where: { id: req.params.id } });
+
+    if (deleted.count === 0) {
+      res.status(404).json({ error: "User not found." });
+      return;
+    }
+
+    res.json({ deleted: true });
+  }),
+);
+
 export async function seedInviteCodes(): Promise<void> {
   const count = await prisma.inviteCode.count();
   if (count > 0) return;

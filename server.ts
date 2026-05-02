@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import { learningRoutes } from "./server/learningRoutes.js";
 import { adminRoutes, seedInviteCodes } from "./server/adminRoutes.js";
 import { resolveClientDistPath } from "./server/paths.js";
+import { createRateLimit } from "./server/rateLimit.js";
 import { formatSseEvent } from "./server/sse.js";
 import { generateBreakdownOnServer, generateComplexSentenceOnServer, streamBreakdownOnServer, streamComplexSentenceOnServer } from "./server/webai.js";
 
@@ -17,7 +18,10 @@ const __dirname = path.dirname(__filename);
 const distPath = resolveClientDistPath(__dirname);
 const rateWindowMs = 60_000;
 const maxRequestsPerWindow = Number(process.env.RATE_LIMIT_PER_MINUTE || 20);
-const requestCounts = new Map<string, { count: number; resetAt: number }>();
+const maxAdminRequestsPerWindow = Number(process.env.ADMIN_RATE_LIMIT_PER_MINUTE || 120);
+const apiRateLimit = createRateLimit({ windowMs: rateWindowMs, maxRequests: maxRequestsPerWindow, keyPrefix: "api" });
+const adminRateLimit = createRateLimit({ windowMs: rateWindowMs, maxRequests: maxAdminRequestsPerWindow, keyPrefix: "admin" });
+const learningRateLimit = createRateLimit({ windowMs: rateWindowMs, maxRequests: maxRequestsPerWindow, keyPrefix: "learning" });
 const chineseTextPattern = /[\u3400-\u9FFF\uF900-\uFAFF]/;
 const breakdownProgressMessages = {
   validating: "Validating the sentence...",
@@ -56,26 +60,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-function rateLimit(req: Request, res: Response, next: NextFunction) {
-  const key = req.ip || "unknown";
-  const now = Date.now();
-  const entry = requestCounts.get(key);
-
-  if (!entry || entry.resetAt <= now) {
-    requestCounts.set(key, { count: 1, resetAt: now + rateWindowMs });
-    next();
-    return;
-  }
-
-  if (entry.count >= maxRequestsPerWindow) {
-    res.status(429).json({ error: "Too many requests. Please try again later." });
-    return;
-  }
-
-  requestCounts.set(key, { ...entry, count: entry.count + 1 });
-  next();
-}
-
 function readSentence(body: unknown): string {
   if (!body || typeof body !== "object" || !("sentence" in body)) {
     throw new Error("Missing sentence.");
@@ -102,10 +86,10 @@ function readSentence(body: unknown): string {
   return trimmed;
 }
 
-app.use("/api", rateLimit, learningRoutes);
-app.use("/api/admin", rateLimit, adminRoutes);
+app.use("/api/admin", adminRateLimit, adminRoutes);
+app.use("/api", learningRateLimit, learningRoutes);
 
-app.post("/api/breakdown", rateLimit, async (req: Request, res: Response) => {
+app.post("/api/breakdown", apiRateLimit, async (req: Request, res: Response) => {
   try {
     const sentence = readSentence(req.body);
     const breakdown = await generateBreakdownOnServer(sentence);
@@ -117,7 +101,7 @@ app.post("/api/breakdown", rateLimit, async (req: Request, res: Response) => {
   }
 });
 
-app.post("/api/sentence", rateLimit, async (_req: Request, res: Response) => {
+app.post("/api/sentence", apiRateLimit, async (_req: Request, res: Response) => {
   try {
     const sentence = await generateComplexSentenceOnServer();
     res.json({ sentence });
@@ -127,7 +111,7 @@ app.post("/api/sentence", rateLimit, async (_req: Request, res: Response) => {
   }
 });
 
-app.post("/api/breakdown/stream", rateLimit, async (req: Request, res: Response) => {
+app.post("/api/breakdown/stream", apiRateLimit, async (req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
@@ -162,7 +146,7 @@ app.post("/api/breakdown/stream", rateLimit, async (req: Request, res: Response)
   }
 });
 
-app.post("/api/sentence/stream", rateLimit, async (_req: Request, res: Response) => {
+app.post("/api/sentence/stream", apiRateLimit, async (_req: Request, res: Response) => {
   res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");

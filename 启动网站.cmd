@@ -35,9 +35,10 @@ if errorlevel 1 (
   exit /b 1
 )
 
-call npm run db:push
+call npm run db:push -- --accept-data-loss
 if errorlevel 1 (
   echo [ERROR] Database initialization failed.
+  echo [HINT] If this happened after changing invite-code rules, check for duplicate users using the same invite code.
   pause
   exit /b 1
 )
@@ -49,6 +50,10 @@ timeout /t 2 /nobreak >nul
 
 echo Starting frontend on http://localhost:3000 ...
 start "SentenceBreak Web" /D "%~dp0" cmd /k "npm run dev"
+
+timeout /t 2 /nobreak >nul
+echo Opening website in your browser...
+start "" "http://localhost:3000"
 
 echo.
 echo Open this URL in your browser:
