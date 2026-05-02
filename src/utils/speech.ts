@@ -1,37 +1,64 @@
 let cachedVoice: SpeechSynthesisVoice | null = null;
-let voiceLoadPromise: Promise<SpeechSynthesisVoice | null> | null = null;
+let voiceLoadAttempted = false;
 
 function pickEnglishVoice(): SpeechSynthesisVoice | null {
   const voices = speechSynthesis.getVoices();
-  return voices.find(v => v.lang === 'en-US') ?? voices.find(v => v.lang.startsWith('en')) ?? null;
+  if (voices.length === 0) return null;
+
+  const enUS = voices.filter(v => v.lang === 'en-US' && !v.localService);
+  if (enUS.length > 0) return enUS[0];
+
+  const enUSAny = voices.filter(v => v.lang === 'en-US');
+  if (enUSAny.length > 0) return enUSAny[0];
+
+  const enAny = voices.filter(v => v.lang.startsWith('en'));
+  if (enAny.length > 0) return enAny[0];
+
+  return null;
 }
 
-function loadEnglishVoice(): Promise<SpeechSynthesisVoice | null> {
-  if (cachedVoice) return Promise.resolve(cachedVoice);
-  if (voiceLoadPromise) return voiceLoadPromise;
+async function ensureVoice(): Promise<SpeechSynthesisVoice | null> {
+  if (cachedVoice) return cachedVoice;
+  if (voiceLoadAttempted) return cachedVoice;
 
-  voiceLoadPromise = new Promise((resolve) => {
-    const voice = pickEnglishVoice();
-    if (voice) { cachedVoice = voice; resolve(voice); return; }
+  const voice = pickEnglishVoice();
+  if (voice) {
+    cachedVoice = voice;
+    voiceLoadAttempted = true;
+    return voice;
+  }
+
+  return new Promise<SpeechSynthesisVoice | null>((resolve) => {
+    let settled = false;
+
+    const finish = (v: SpeechSynthesisVoice | null) => {
+      if (settled) return;
+      settled = true;
+      voiceLoadAttempted = true;
+      cachedVoice = v;
+      resolve(v);
+    };
 
     speechSynthesis.addEventListener('voiceschanged', () => {
-      cachedVoice = pickEnglishVoice();
-      resolve(cachedVoice);
+      finish(pickEnglishVoice());
     }, { once: true });
-  });
 
-  return voiceLoadPromise;
+    setTimeout(() => {
+      finish(pickEnglishVoice());
+    }, 1000);
+  });
 }
 
-loadEnglishVoice();
+ensureVoice();
 
 export async function speakText(text: string) {
   if (!('speechSynthesis' in window)) return;
 
-  const voice = await loadEnglishVoice();
+  const voice = await ensureVoice();
   speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'en-US';
+  utterance.rate = 0.9;
   if (voice) utterance.voice = voice;
   speechSynthesis.speak(utterance);
 }

@@ -221,7 +221,7 @@ function VocabularyHistory({
                       {entry.phonetic && <span className="text-sm font-semibold text-ink-muted">{entry.phonetic}</span>}
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); speakText(entry.pronunciationText || entry.text); }}
+                        onClick={(e) => { e.stopPropagation(); speakText(entry.text); }}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-full text-primary transition-all hover:bg-primary/10"
                         aria-label={`Pronounce ${entry.text}`}
                       >

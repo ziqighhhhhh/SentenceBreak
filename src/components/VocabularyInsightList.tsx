@@ -61,7 +61,7 @@ export function VocabularyInsightList({ insights, compact = false }: VocabularyI
                 </div>
                 <button
                   type="button"
-                  onClick={() => speakText(insight.pronunciationText || insight.text)}
+                  onClick={() => speakText(insight.text)}
                   className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-primary transition-all hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/20"
                   aria-label={`Pronounce ${insight.text}`}
                 >
