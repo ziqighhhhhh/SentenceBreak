@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'motion/react';
-import { BookOpen, LogOut, PenLine, Shield } from 'lucide-react';
+import { BookOpen, LogIn, LogOut, PenLine, Shield } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AdminView } from './components/AdminView';
 import { BreakdownPager } from './components/BreakdownPager';
@@ -11,11 +11,18 @@ import { useBetaSession } from './hooks/useBetaSession';
 import { useLearningRecords } from './hooks/useLearningRecords';
 import { useSentenceBreakdown } from './hooks/useSentenceBreakdown';
 
-type AppView = 'breakdown' | 'learning' | 'admin';
+type AppView = 'breakdown' | 'learning' | 'admin' | 'login';
 
 export default function App() {
   const betaSession = useBetaSession();
   const [activeView, setActiveView] = useState<AppView>('breakdown');
+  const isLoggedIn = Boolean(betaSession.session);
+
+  useEffect(() => {
+    if (isLoggedIn && activeView === 'login') {
+      setActiveView('learning');
+    }
+  }, [isLoggedIn, activeView]);
   const {
     saveStatus,
     saveError,
@@ -68,22 +75,14 @@ export default function App() {
     }
   }, [betaSession.session, breakdown, isReviewMode, saveBreakdown]);
 
-  if (betaSession.loading) {
-    return (
-      <main className="flex min-h-screen items-center justify-center px-4">
-        <div className="rounded-full bg-white px-5 py-3 text-sm font-bold text-primary shadow-[3px_5px_30px_rgba(0,0,0,0.08)]">
-          Loading beta session...
-        </div>
-      </main>
-    );
-  }
-
-  if (!betaSession.session) {
+  if (activeView === 'login') {
     return (
       <BetaLoginView
         error={betaSession.error}
         submitting={betaSession.submitting}
-        onLogin={betaSession.login}
+        onLogin={async (code, nickname) => {
+          await betaSession.login(code, nickname);
+        }}
         onClearError={() => betaSession.setError('')}
       />
     );
@@ -123,8 +122,14 @@ export default function App() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveView('learning')}
-              aria-pressed={activeView === 'learning'}
+              onClick={() => {
+                if (!isLoggedIn) {
+                  setActiveView('login');
+                  return;
+                }
+                setActiveView('learning');
+              }}
+              aria-pressed={activeView === 'learning' || activeView === 'login'}
               className={`inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-bold transition-all ${
                 activeView === 'learning'
                   ? 'bg-primary text-white shadow-sm'
@@ -152,17 +157,30 @@ export default function App() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <span className="max-w-[160px] truncate rounded-full bg-canvas-parchment px-4 py-2 text-sm font-bold text-ink">
-              {betaSession.session.user.nickname}
-            </span>
-            <button
-              type="button"
-              onClick={betaSession.logout}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-muted transition-all hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-100"
-              aria-label="Log out"
-            >
-              <LogOut size={17} />
-            </button>
+            {isLoggedIn ? (
+              <>
+                <span className="max-w-[160px] truncate rounded-full bg-canvas-parchment px-4 py-2 text-sm font-bold text-ink">
+                  {betaSession.session!.user.nickname}
+                </span>
+                <button
+                  type="button"
+                  onClick={betaSession.logout}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full text-ink-muted transition-all hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-100"
+                  aria-label="Log out"
+                >
+                  <LogOut size={17} />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActiveView('login')}
+                className="inline-flex h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-white transition-all hover:brightness-110"
+              >
+                <LogIn size={16} />
+                Sign in
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -182,6 +200,14 @@ export default function App() {
             onReload={() => { void admin.loadData(); }}
           />
         ) : activeView === 'learning' ? (
+          !isLoggedIn ? (
+            <BetaLoginView
+              error={betaSession.error}
+              submitting={betaSession.submitting}
+              onLogin={betaSession.login}
+              onClearError={() => betaSession.setError('')}
+            />
+          ) : (
           <MyLearningView
             sessions={sessions}
             vocabulary={vocabulary}
@@ -198,7 +224,7 @@ export default function App() {
               setActiveView('breakdown');
             }}
           />
-        ) : (
+          )) : (
           <AnimatePresence mode="wait">
             {!breakdown ? (
               <LandingView
@@ -234,6 +260,10 @@ export default function App() {
                   reset();
                 }}
                 onRetrySave={() => {
+                  if (!isLoggedIn) {
+                    setActiveView('login');
+                    return;
+                  }
                   void retrySave();
                 }}
                 onToggleSummaryStep={toggleSummaryStep}
