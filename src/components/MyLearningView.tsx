@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { BookOpen, ChevronDown, Loader2, RotateCw, Type } from 'lucide-react';
-import type { MasteryStatus, SavedLearningSession, SavedVocabularyEntry } from '../types';
+import { BookOpen, ChevronDown, Loader2, RotateCw, Type, Volume2 } from 'lucide-react';
+import type { MasteryStatus, SavedLearningSession, SavedVocabularyEntry, SentenceBreakdown } from '../types';
+import { speakText } from '../utils/speech';
 
 interface MyLearningViewProps {
   sessions: readonly SavedLearningSession[];
@@ -9,6 +10,7 @@ interface MyLearningViewProps {
   error: string;
   onReload: () => void;
   onUpdateMastery: (id: string, masteryStatus: MasteryStatus) => void;
+  onSelectSession: (breakdown: SentenceBreakdown) => void;
 }
 
 type LearningTab = 'sentences' | 'vocabulary';
@@ -36,6 +38,7 @@ export function MyLearningView({
   error,
   onReload,
   onUpdateMastery,
+  onSelectSession,
 }: MyLearningViewProps) {
   const [activeTab, setActiveTab] = useState<LearningTab>('sentences');
   const [filter, setFilter] = useState<VocabularyFilter>('all');
@@ -93,7 +96,7 @@ export function MyLearningView({
       </div>
 
       {activeTab === 'sentences' ? (
-        <SentenceHistory sessions={sessions} loading={loading} />
+        <SentenceHistory sessions={sessions} loading={loading} onSelectSession={onSelectSession} />
       ) : (
         <VocabularyHistory
           vocabulary={filteredVocabulary}
@@ -119,7 +122,7 @@ export function MyLearningView({
   );
 }
 
-function SentenceHistory({ sessions, loading }: { sessions: readonly SavedLearningSession[]; loading: boolean }) {
+function SentenceHistory({ sessions, loading, onSelectSession }: { sessions: readonly SavedLearningSession[]; loading: boolean; onSelectSession: (breakdown: SentenceBreakdown) => void }) {
   if (loading && sessions.length === 0) {
     return <EmptyState text="Loading sentence history..." />;
   }
@@ -133,7 +136,11 @@ function SentenceHistory({ sessions, loading }: { sessions: readonly SavedLearni
       {sessions.map((session) => {
         const insightCount = session.breakdown.steps.reduce((count, step) => count + (step.vocabularyInsights?.length ?? 0), 0);
         return (
-          <article key={session.id} className="rounded-[20px] border border-hairline bg-white p-5 shadow-[3px_5px_30px_rgba(0,0,0,0.06)]">
+          <article
+            key={session.id}
+            onClick={() => onSelectSession(session.breakdown)}
+            className="cursor-pointer rounded-[20px] border border-hairline bg-white p-5 shadow-[3px_5px_30px_rgba(0,0,0,0.06)] transition-all hover:shadow-[3px_5px_30px_rgba(0,78,159,0.12)] hover:border-primary/20"
+          >
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <span className="rounded-full bg-primary-fixed px-3 py-1 text-xs font-bold text-primary">{session.sourceLabel}</span>
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">{formatDate(session.createdAt)}</span>
@@ -202,6 +209,14 @@ function VocabularyHistory({
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                       <h2 className="text-2xl font-bold text-ink">{entry.text}</h2>
                       {entry.phonetic && <span className="text-sm font-semibold text-ink-muted">{entry.phonetic}</span>}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); speakText(entry.pronunciationText || entry.text); }}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-primary transition-all hover:bg-primary/10"
+                        aria-label={`Pronounce ${entry.text}`}
+                      >
+                        <Volume2 size={15} />
+                      </button>
                     </div>
                     <p className="mt-2 text-sm font-bold text-primary">
                       {entry.senses[0]?.meaningInContext ?? entry.type}

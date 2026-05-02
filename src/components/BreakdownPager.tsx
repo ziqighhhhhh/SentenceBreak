@@ -13,6 +13,7 @@ interface BreakdownPagerProps {
   expandedSummarySteps: ReadonlySet<number>;
   saveStatus: SaveStatus;
   saveError: string;
+  isReviewMode: boolean;
   onGoToPage: (index: number) => void;
   onNextStep: () => void;
   onPrevStep: () => void;
@@ -28,6 +29,7 @@ export function BreakdownPager({
   expandedSummarySteps,
   saveStatus,
   saveError,
+  isReviewMode,
   onGoToPage,
   onNextStep,
   onPrevStep,
@@ -127,6 +129,7 @@ export function BreakdownPager({
               expandedSummarySteps={expandedSummarySteps}
               saveStatus={saveStatus}
               saveError={saveError}
+              isReviewMode={isReviewMode}
               onToggleSummaryStep={onToggleSummaryStep}
               onRetrySave={onRetrySave}
               onReset={onReset}

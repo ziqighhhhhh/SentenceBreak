@@ -11,6 +11,7 @@ interface SummaryViewProps {
   expandedSummarySteps: ReadonlySet<number>;
   saveStatus: SaveStatus;
   saveError: string;
+  isReviewMode: boolean;
   onToggleSummaryStep: (index: number) => void;
   onRetrySave: () => void;
   onReset: () => void;
@@ -21,6 +22,7 @@ export function SummaryView({
   expandedSummarySteps,
   saveStatus,
   saveError,
+  isReviewMode,
   onToggleSummaryStep,
   onRetrySave,
   onReset,
@@ -173,13 +175,15 @@ export function SummaryView({
           </div>
         </div>
 
-        <SaveStatusNotice status={saveStatus} error={saveError} onRetrySave={onRetrySave} />
+        {!isReviewMode && (
+          <SaveStatusNotice status={saveStatus} error={saveError} onRetrySave={onRetrySave} />
+        )}
 
         <button
           onClick={onReset}
           className="bg-primary text-white px-10 py-4 rounded-full text-lg font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all w-full md:w-auto"
         >
-          Clear and start over
+          {isReviewMode ? 'Return to My Learning' : 'Clear and start over'}
         </button>
       </div>
     </div>

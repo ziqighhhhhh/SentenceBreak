@@ -73,6 +73,7 @@ export function useSentenceBreakdown() {
   const [breakdown, setBreakdown] = useState<SentenceBreakdown | null>(null);
   const [currentStepIdx, setCurrentStepIdx] = useState(-1);
   const [slideDirection, setSlideDirection] = useState(1);
+  const [isReviewMode, setIsReviewMode] = useState(false);
   const generatedSentenceTimerRef = useRef<number | null>(null);
   const cachedBreakdownInputRef = useRef('');
   const pendingAnalysisRef = useRef<{
@@ -219,6 +220,7 @@ export function useSentenceBreakdown() {
     setErrorNotice(null);
     setSlideDirection(-1);
     setCurrentStepIdx(-1);
+    setIsReviewMode(false);
   }, [clearGeneratedSentenceTimer]);
 
   const handleAnalyze = useCallback(async () => {
@@ -241,6 +243,7 @@ export function useSentenceBreakdown() {
       setErrorNotice(null);
       setSlideDirection(1);
       setCurrentStepIdx(-1);
+      setIsReviewMode(false);
       return;
     }
 
@@ -251,6 +254,7 @@ export function useSentenceBreakdown() {
       setInputHint('');
       setSlideDirection(1);
       setCurrentStepIdx(-1);
+      setIsReviewMode(false);
     }
   }, [cacheBreakdownForInput, cachedBreakdown, input]);
 
@@ -288,7 +292,20 @@ export function useSentenceBreakdown() {
     setErrorNotice(null);
     setSlideDirection(1);
     setCurrentStepIdx(-1);
+    setIsReviewMode(false);
   }, [cachedBreakdown]);
+
+  const loadSavedBreakdown = useCallback((saved: SentenceBreakdown) => {
+    clearGeneratedSentenceTimer();
+    setBreakdown(saved);
+    setExpandedSummarySteps(new Set());
+    setInputHint('');
+    setAnalysisProgress('');
+    setErrorNotice(null);
+    setSlideDirection(1);
+    setCurrentStepIdx(saved.steps.length);
+    setIsReviewMode(true);
+  }, [clearGeneratedSentenceTimer]);
 
   const nextStep = useCallback(() => {
     if (breakdown && currentStepIdx < breakdown.steps.length) {
@@ -429,10 +446,12 @@ export function useSentenceBreakdown() {
     slideDirection,
     isBusy,
     isSummary,
+    isReviewMode,
     handleInputChange,
     handleAnalyze,
     handleGenerateSentence,
     startCachedBreakdown,
+    loadSavedBreakdown,
     nextStep,
     prevStep,
     reset,

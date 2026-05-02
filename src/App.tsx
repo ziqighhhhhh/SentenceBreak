@@ -44,10 +44,12 @@ export default function App() {
     currentStepIdx,
     slideDirection,
     isBusy,
+    isReviewMode,
     handleInputChange,
     handleAnalyze,
     handleGenerateSentence,
     startCachedBreakdown,
+    loadSavedBreakdown,
     nextStep,
     prevStep,
     reset,
@@ -59,10 +61,10 @@ export default function App() {
   const admin = useAdmin(isAdmin ? betaSession.session?.token ?? null : null);
 
   useEffect(() => {
-    if (breakdown && betaSession.session) {
+    if (breakdown && betaSession.session && !isReviewMode) {
       void saveBreakdown(breakdown);
     }
-  }, [betaSession.session, breakdown, saveBreakdown]);
+  }, [betaSession.session, breakdown, isReviewMode, saveBreakdown]);
 
   if (betaSession.loading) {
     return (
@@ -189,6 +191,10 @@ export default function App() {
             onUpdateMastery={(id, masteryStatus) => {
               void updateMastery(id, masteryStatus);
             }}
+            onSelectSession={(savedBreakdown) => {
+              loadSavedBreakdown(savedBreakdown);
+              setActiveView('breakdown');
+            }}
           />
         ) : (
           <AnimatePresence mode="wait">
@@ -217,10 +223,14 @@ export default function App() {
                 expandedSummarySteps={expandedSummarySteps}
                 saveStatus={saveStatus}
                 saveError={saveError}
+                isReviewMode={isReviewMode}
                 onGoToPage={goToPage}
                 onNextStep={nextStep}
                 onPrevStep={prevStep}
-                onReset={reset}
+                onReset={() => {
+                  if (isReviewMode) setActiveView('learning');
+                  reset();
+                }}
                 onRetrySave={() => {
                   void retrySave();
                 }}
