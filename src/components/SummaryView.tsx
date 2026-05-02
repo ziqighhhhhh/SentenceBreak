@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { BookOpen, CheckCircle2, ChevronDown, Type } from 'lucide-react';
+import { BookOpen, CheckCircle2, ChevronDown, Loader2, RotateCw, Type } from 'lucide-react';
+import type { SaveStatus } from '../hooks/useLearningRecords';
 import type { SentenceBreakdown } from '../types';
 import { getAddedTextSegments } from '../utils/highlightDiff';
 import { HighlightedSentence } from './HighlightedSentence';
@@ -8,14 +9,20 @@ import { VocabularyInsightList } from './VocabularyInsightList';
 interface SummaryViewProps {
   breakdown: SentenceBreakdown;
   expandedSummarySteps: ReadonlySet<number>;
+  saveStatus: SaveStatus;
+  saveError: string;
   onToggleSummaryStep: (index: number) => void;
+  onRetrySave: () => void;
   onReset: () => void;
 }
 
 export function SummaryView({
   breakdown,
   expandedSummarySteps,
+  saveStatus,
+  saveError,
   onToggleSummaryStep,
+  onRetrySave,
   onReset,
 }: SummaryViewProps) {
   const summarySteps = breakdown.steps.slice(0, -1);
@@ -166,6 +173,8 @@ export function SummaryView({
           </div>
         </div>
 
+        <SaveStatusNotice status={saveStatus} error={saveError} onRetrySave={onRetrySave} />
+
         <button
           onClick={onReset}
           className="bg-primary text-white px-10 py-4 rounded-full text-lg font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all w-full md:w-auto"
@@ -173,6 +182,50 @@ export function SummaryView({
           Clear and start over
         </button>
       </div>
+    </div>
+  );
+}
+
+function SaveStatusNotice({
+  status,
+  error,
+  onRetrySave,
+}: {
+  status: SaveStatus;
+  error: string;
+  onRetrySave: () => void;
+}) {
+  if (status === 'idle') return null;
+
+  if (status === 'saving') {
+    return (
+      <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-primary ring-1 ring-zinc-200">
+        <Loader2 size={16} className="animate-spin" />
+        Saving to My Learning
+      </div>
+    );
+  }
+
+  if (status === 'saved') {
+    return (
+      <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-primary ring-1 ring-zinc-200">
+        <CheckCircle2 size={16} />
+        Saved to My Learning
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-8 rounded-2xl border border-red-100 bg-red-50 p-4 text-left text-sm font-semibold text-red-800">
+      <p>{error || 'Breakdown is ready, but saving failed.'}</p>
+      <button
+        type="button"
+        onClick={onRetrySave}
+        className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-red-700 ring-1 ring-red-100 transition-all hover:bg-red-100"
+      >
+        <RotateCw size={15} />
+        Retry save
+      </button>
     </div>
   );
 }

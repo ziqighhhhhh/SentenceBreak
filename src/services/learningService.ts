@@ -1,3 +1,5 @@
+import type { MasteryStatus, SavedLearningSession, SavedVocabularyEntry, SentenceBreakdown } from '../types';
+
 export interface BetaSession {
   token: string;
   user: {
@@ -9,6 +11,31 @@ export interface BetaSession {
 
 interface ApiErrorResponse {
   error?: string;
+}
+
+interface LearningSessionsResponse {
+  sessions?: SavedLearningSession[];
+  error?: string;
+}
+
+interface VocabularyResponse {
+  entries?: SavedVocabularyEntry[];
+  error?: string;
+}
+
+function authHeaders(token: string) {
+  return {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+async function readJsonResponse<T extends ApiErrorResponse>(response: Response, fallbackMessage: string): Promise<T> {
+  const data = await response.json() as T;
+  if (!response.ok) {
+    throw new Error(data.error || fallbackMessage);
+  }
+  return data;
 }
 
 function isBetaSession(value: unknown): value is BetaSession {
@@ -43,4 +70,40 @@ export async function enterBeta(inviteCode: string, nickname: string): Promise<B
   }
 
   return data;
+}
+
+export async function saveLearningSession(token: string, breakdown: SentenceBreakdown): Promise<{ id: string; saved: true }> {
+  const response = await fetch('/api/learning-sessions', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ breakdown }),
+  });
+
+  return readJsonResponse<{ id: string; saved: true; error?: string }>(response, 'Unable to save learning session.');
+}
+
+export async function listLearningSessions(token: string): Promise<SavedLearningSession[]> {
+  const response = await fetch('/api/learning-sessions', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await readJsonResponse<LearningSessionsResponse>(response, 'Unable to load learning sessions.');
+  return data.sessions ?? [];
+}
+
+export async function listVocabulary(token: string): Promise<SavedVocabularyEntry[]> {
+  const response = await fetch('/api/vocabulary', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await readJsonResponse<VocabularyResponse>(response, 'Unable to load vocabulary.');
+  return data.entries ?? [];
+}
+
+export async function updateVocabularyMastery(token: string, id: string, masteryStatus: MasteryStatus): Promise<void> {
+  const response = await fetch(`/api/vocabulary/${id}/mastery`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ masteryStatus }),
+  });
+
+  await readJsonResponse<ApiErrorResponse>(response, 'Unable to update mastery status.');
 }

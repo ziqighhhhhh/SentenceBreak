@@ -31,3 +31,50 @@ export interface SentenceBreakdown {
   totalSentences: number;
   totalWords: number;
 }
+
+export type MasteryStatus = 'new' | 'reviewing' | 'mastered';
+
+export interface SavedLearningSession {
+  id: string;
+  sourceSentence: string;
+  sourceLabel: string;
+  totalWords: number;
+  createdAt: string;
+  completedAt: string | null;
+  breakdown: SentenceBreakdown;
+}
+
+export interface SavedVocabularySense {
+  id: string;
+  senseKey: string;
+  meaningInContext: string;
+  dictionaryMeaning: string | null;
+  usageNote: string;
+  example: string | null;
+  createdAt: string;
+}
+
+export interface SavedVocabularyOccurrence {
+  id: string;
+  sessionId: string;
+  stepIndex: number;
+  sentenceText: string;
+  createdAt: string;
+}
+
+export interface SavedVocabularyEntry {
+  id: string;
+  text: string;
+  normalizedText: string;
+  type: VocabularyInsightType;
+  phonetic: string | null;
+  pronunciationText: string | null;
+  synonyms: string[];
+  antonyms: string[];
+  masteryStatus: MasteryStatus;
+  occurrenceCount: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  senses: SavedVocabularySense[];
+  occurrences: SavedVocabularyOccurrence[];
+}

@@ -1,10 +1,12 @@
 import { AnimatePresence } from 'motion/react';
 import { BookOpen, LogOut, PenLine } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BreakdownPager } from './components/BreakdownPager';
 import { BetaLoginView } from './components/BetaLoginView';
 import { LandingView } from './components/LandingView';
+import { MyLearningView } from './components/MyLearningView';
 import { useBetaSession } from './hooks/useBetaSession';
+import { useLearningRecords } from './hooks/useLearningRecords';
 import { useSentenceBreakdown } from './hooks/useSentenceBreakdown';
 
 type AppView = 'breakdown' | 'learning';
@@ -12,6 +14,18 @@ type AppView = 'breakdown' | 'learning';
 export default function App() {
   const betaSession = useBetaSession();
   const [activeView, setActiveView] = useState<AppView>('breakdown');
+  const {
+    saveStatus,
+    saveError,
+    sessions,
+    vocabulary,
+    loadingRecords,
+    recordsError,
+    loadRecords,
+    saveBreakdown,
+    retrySave,
+    updateMastery,
+  } = useLearningRecords(betaSession.session?.token ?? null);
   const sentenceBreakdown = useSentenceBreakdown();
   const {
     input,
@@ -38,6 +52,12 @@ export default function App() {
     goToPage,
     toggleSummaryStep,
   } = sentenceBreakdown;
+
+  useEffect(() => {
+    if (breakdown && betaSession.session) {
+      void saveBreakdown(breakdown);
+    }
+  }, [betaSession.session, breakdown, saveBreakdown]);
 
   if (betaSession.loading) {
     return (
@@ -125,7 +145,18 @@ export default function App() {
 
       <main className={`flex-grow flex flex-col items-center px-4 ${breakdown && activeView === 'breakdown' ? 'justify-start py-12 pb-28 md:justify-center md:py-20' : 'justify-center py-10 md:py-16'}`}>
         {activeView === 'learning' ? (
-          <PlaceholderLearningView nickname={betaSession.session.user.nickname} />
+          <MyLearningView
+            sessions={sessions}
+            vocabulary={vocabulary}
+            loading={loadingRecords}
+            error={recordsError}
+            onReload={() => {
+              void loadRecords();
+            }}
+            onUpdateMastery={(id, masteryStatus) => {
+              void updateMastery(id, masteryStatus);
+            }}
+          />
         ) : (
           <AnimatePresence mode="wait">
             {!breakdown ? (
@@ -151,10 +182,15 @@ export default function App() {
                 currentStepIdx={currentStepIdx}
                 slideDirection={slideDirection}
                 expandedSummarySteps={expandedSummarySteps}
+                saveStatus={saveStatus}
+                saveError={saveError}
                 onGoToPage={goToPage}
                 onNextStep={nextStep}
                 onPrevStep={prevStep}
                 onReset={reset}
+                onRetrySave={() => {
+                  void retrySave();
+                }}
                 onToggleSummaryStep={toggleSummaryStep}
               />
             )}
@@ -162,19 +198,5 @@ export default function App() {
         )}
       </main>
     </div>
-  );
-}
-
-function PlaceholderLearningView({ nickname }: { nickname: string }) {
-  return (
-    <section className="w-full max-w-3xl rounded-[24px] border border-hairline bg-white p-8 text-center shadow-[3px_5px_30px_rgba(0,0,0,0.08)] sm:p-12">
-      <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-primary-fixed text-primary">
-        <BookOpen size={24} />
-      </div>
-      <h1 className="text-3xl font-bold tracking-tight text-ink">My Learning</h1>
-      <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-ink-muted">
-        {nickname}, your saved sentence history and vocabulary review will appear here after you complete a breakdown.
-      </p>
-    </section>
   );
 }

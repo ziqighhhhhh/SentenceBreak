@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import type { SaveStatus } from '../hooks/useLearningRecords';
 import { SentenceBreakdown } from '../types';
 import { ParticleReveal } from './ParticleReveal';
 import { StepCard } from './StepCard';
@@ -10,10 +11,13 @@ interface BreakdownPagerProps {
   currentStepIdx: number;
   slideDirection: number;
   expandedSummarySteps: ReadonlySet<number>;
+  saveStatus: SaveStatus;
+  saveError: string;
   onGoToPage: (index: number) => void;
   onNextStep: () => void;
   onPrevStep: () => void;
   onReset: () => void;
+  onRetrySave: () => void;
   onToggleSummaryStep: (index: number) => void;
 }
 
@@ -22,10 +26,13 @@ export function BreakdownPager({
   currentStepIdx,
   slideDirection,
   expandedSummarySteps,
+  saveStatus,
+  saveError,
   onGoToPage,
   onNextStep,
   onPrevStep,
   onReset,
+  onRetrySave,
   onToggleSummaryStep,
 }: BreakdownPagerProps) {
   const isSummary = currentStepIdx === breakdown.steps.length;
@@ -118,7 +125,10 @@ export function BreakdownPager({
             <SummaryView
               breakdown={breakdown}
               expandedSummarySteps={expandedSummarySteps}
+              saveStatus={saveStatus}
+              saveError={saveError}
               onToggleSummaryStep={onToggleSummaryStep}
+              onRetrySave={onRetrySave}
               onReset={onReset}
             />
           )}
