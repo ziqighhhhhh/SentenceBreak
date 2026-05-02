@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model TestUser {
+  id               String            @id @default(cuid())
+  inviteCode       String
+  nickname         String
+  createdAt        DateTime          @default(now())
+  lastSeenAt       DateTime          @updatedAt
+  authSessions     AuthSession[]
+  learningSessions LearningSession[]
+  vocabularyEntries VocabularyEntry[]
+
+  @@unique([inviteCode, nickname])
+}
+
+model AuthSession {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      TestUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LearningSession {
+  id             String                 @id @default(cuid())
+  userId         String
+  sourceSentence String
+  sourceLabel    String
+  breakdownJson  String
+  totalWords     Int
+  createdAt      DateTime               @default(now())
+  completedAt    DateTime?
+  user           TestUser               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  occurrences    VocabularyOccurrence[]
+}
+
+model VocabularyEntry {
+  id                String                 @id @default(cuid())
+  userId            String
+  text              String
+  normalizedText    String
+  type              String
+  phonetic          String?
+  pronunciationText String?
+  synonymsJson      String
+  antonymsJson      String
+  masteryStatus     String                 @default("new")
+  occurrenceCount   Int                    @default(0)
+  firstSeenAt       DateTime               @default(now())
+  lastSeenAt        DateTime               @default(now())
+  user              TestUser               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  senses            VocabularySense[]
+  occurrences       VocabularyOccurrence[]
+
+  @@unique([userId, normalizedText])
+}
+
+model VocabularySense {
+  id                String                 @id @default(cuid())
+  entryId           String
+  senseKey          String
+  meaningInContext  String
+  dictionaryMeaning String?
+  usageNote         String
+  example           String?
+  createdAt         DateTime               @default(now())
+  entry             VocabularyEntry        @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  occurrences       VocabularyOccurrence[]
+
+  @@unique([entryId, senseKey])
+}
+
+model VocabularyOccurrence {
+  id           String          @id @default(cuid())
+  entryId      String
+  senseId      String
+  sessionId    String
+  stepIndex    Int
+  sentenceText String
+  createdAt    DateTime        @default(now())
+  entry         VocabularyEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  sense         VocabularySense @relation(fields: [senseId], references: [id], onDelete: Cascade)
+  session       LearningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([senseId, sessionId, stepIndex])
+}

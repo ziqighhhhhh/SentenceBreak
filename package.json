@@ -12,10 +12,14 @@
     "start": "node dist-server/server.js",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test": "npm run build:server && node tests/openaiStream.test.mjs"
+    "test": "npm run build:server && node tests/openaiStream.test.mjs",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push"
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.6",
+    "@prisma/client": "^7.8.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
@@ -30,6 +34,7 @@
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
+    "prisma": "^7.8.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
