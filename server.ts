@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import express, { type NextFunction, type Request, type Response } from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import { learningRoutes } from "./server/learningRoutes.js";
 import { resolveClientDistPath } from "./server/paths.js";
 import { formatSseEvent } from "./server/sse.js";
 import { generateBreakdownOnServer, generateComplexSentenceOnServer, streamBreakdownOnServer, streamComplexSentenceOnServer } from "./server/webai.js";
@@ -99,6 +100,8 @@ function readSentence(body: unknown): string {
 
   return trimmed;
 }
+
+app.use("/api", rateLimit, learningRoutes);
 
 app.post("/api/breakdown", rateLimit, async (req: Request, res: Response) => {
   try {
