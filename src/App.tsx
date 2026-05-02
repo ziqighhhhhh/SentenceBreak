@@ -28,7 +28,9 @@ export default function App() {
     retrySave,
     updateMastery,
   } = useLearningRecords(betaSession.session?.token ?? null);
-  const sentenceBreakdown = useSentenceBreakdown();
+  const sentenceBreakdown = useSentenceBreakdown({
+    onExitReview: () => setActiveView('learning'),
+  });
   const {
     input,
     loading,

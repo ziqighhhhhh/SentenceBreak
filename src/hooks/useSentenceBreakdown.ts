@@ -59,7 +59,8 @@ function getFriendlyErrorMessage(error: unknown, action: ErrorAction): string {
   return '句子分析失败，请重试。';
 }
 
-export function useSentenceBreakdown() {
+export function useSentenceBreakdown(options?: { onExitReview?: () => void }) {
+  const onExitReview = options?.onExitReview;
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatingSentence, setGeneratingSentence] = useState(false);
@@ -401,7 +402,12 @@ export function useSentenceBreakdown() {
 
         if (breakdown) {
           event.preventDefault();
-          returnToEdit();
+          if (isReviewMode) {
+            onExitReview?.();
+            returnToEdit();
+          } else {
+            returnToEdit();
+          }
         }
         return;
       }
@@ -416,6 +422,7 @@ export function useSentenceBreakdown() {
       if (event.key === 'ArrowRight') {
         event.preventDefault();
         if (isSummary) {
+          if (isReviewMode) onExitReview?.();
           reset();
           return;
         }
@@ -428,7 +435,7 @@ export function useSentenceBreakdown() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [breakdown, cachedBreakdown, clearError, errorNotice, handleAnalyze, input, isBusy, isSummary, nextStep, prevStep, reset, returnToEdit, startCachedBreakdown]);
+  }, [breakdown, cachedBreakdown, clearError, errorNotice, handleAnalyze, input, isBusy, isReviewMode, isSummary, nextStep, onExitReview, prevStep, reset, returnToEdit, startCachedBreakdown]);
 
   return {
     input,
