@@ -1,7 +1,8 @@
 import { motion } from 'motion/react';
-import { Plus } from 'lucide-react';
+import { Plus, Volume2 } from 'lucide-react';
 import type { SentenceBreakdown } from '../types';
 import { getAddedTextSegments } from '../utils/highlightDiff';
+import { speakText } from '../utils/speech';
 import { HighlightedSentence } from './HighlightedSentence';
 import { VocabularyInsightList } from './VocabularyInsightList';
 
@@ -35,7 +36,17 @@ export function StepCard({ breakdown, currentStepIdx }: StepCardProps) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.2, duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
         >
-          <p className="text-3xl md:text-5xl font-bold text-zinc-900 leading-tight tracking-tight">{breakdown.targetSentence}</p>
+          <div className="flex items-center justify-center gap-3">
+            <p className="text-3xl md:text-5xl font-bold text-zinc-900 leading-tight tracking-tight">{breakdown.targetSentence}</p>
+            <button
+              type="button"
+              onClick={() => speakText(breakdown.targetSentence)}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-primary transition-all hover:bg-primary/10"
+              aria-label="Pronounce sentence"
+            >
+              <Volume2 size={20} />
+            </button>
+          </div>
         </motion.div>
 
         <motion.div
@@ -46,7 +57,17 @@ export function StepCard({ breakdown, currentStepIdx }: StepCardProps) {
         >
           <h2 className="text-primary text-xl font-semibold">Then start from the base sentence</h2>
           <div className="w-full bg-[#f5f5f7] p-8 text-center">
-            <p className="text-3xl font-bold text-zinc-900 leading-tight tracking-tight mb-4">{breakdown.steps[0].english}</p>
+            <div className="flex items-center justify-center gap-3">
+              <p className="text-3xl font-bold text-zinc-900 leading-tight tracking-tight">{breakdown.steps[0].english}</p>
+              <button
+                type="button"
+                onClick={() => speakText(breakdown.steps[0].english)}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-primary transition-all hover:bg-primary/10"
+                aria-label="Pronounce base sentence"
+              >
+                <Volume2 size={20} />
+              </button>
+            </div>
             <p className="text-lg text-ink-muted leading-relaxed font-medium">{breakdown.steps[0].chinese}</p>
           </div>
         </motion.div>
@@ -87,7 +108,17 @@ export function StepCard({ breakdown, currentStepIdx }: StepCardProps) {
           <h3 className="text-3xl md:text-5xl font-bold leading-tight tracking-tight mb-4 text-zinc-900">
             <HighlightedSentence segments={highlightedSentence} />
           </h3>
-          <p className="text-xl font-medium text-ink-muted">{step.chinese}</p>
+          <div className="flex items-center justify-center gap-2">
+            <p className="text-xl font-medium text-ink-muted">{step.chinese}</p>
+            <button
+              type="button"
+              onClick={() => speakText(step.english)}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-primary transition-all hover:bg-primary/10"
+              aria-label="Pronounce step sentence"
+            >
+              <Volume2 size={17} />
+            </button>
+          </div>
         </motion.div>
 
         <motion.div

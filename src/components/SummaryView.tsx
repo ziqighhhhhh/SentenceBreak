@@ -1,8 +1,9 @@
 import { AnimatePresence, motion } from 'motion/react';
-import { BookOpen, CheckCircle2, ChevronDown, Loader2, RotateCw, Type } from 'lucide-react';
+import { BookOpen, CheckCircle2, ChevronDown, Loader2, RotateCw, Type, Volume2 } from 'lucide-react';
 import type { SaveStatus } from '../hooks/useLearningRecords';
 import type { SentenceBreakdown } from '../types';
 import { getAddedTextSegments } from '../utils/highlightDiff';
+import { speakText } from '../utils/speech';
 import { HighlightedSentence } from './HighlightedSentence';
 import { VocabularyInsightList } from './VocabularyInsightList';
 
@@ -70,9 +71,19 @@ export function SummaryView({
                 </div>
               </div>
               <div className="min-w-0 text-left flex flex-col gap-3">
-                <p className="text-lg font-bold text-zinc-900 leading-snug">
-                  <HighlightedSentence segments={highlightedSentence} />
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-lg font-bold text-zinc-900 leading-snug">
+                    <HighlightedSentence segments={highlightedSentence} />
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => speakText(step.english)}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-primary transition-all hover:bg-primary/10"
+                    aria-label={`Pronounce step ${index + 1}`}
+                  >
+                    <Volume2 size={15} />
+                  </button>
+                </div>
                 <p className="text-sm text-zinc-500 font-medium leading-relaxed">{step.chinese}</p>
                 <button
                   onClick={() => {
@@ -118,7 +129,17 @@ export function SummaryView({
               </div>
             </div>
             <div className="text-white min-w-0 text-left flex flex-col gap-3">
-              <p className="text-2xl md:text-3xl font-bold leading-tight">{finalStep.english || breakdown.targetSentence}</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-2xl md:text-3xl font-bold leading-tight">{finalStep.english || breakdown.targetSentence}</p>
+                <button
+                  type="button"
+                  onClick={() => speakText(finalStep.english || breakdown.targetSentence)}
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/20 hover:text-white"
+                  aria-label="Pronounce final sentence"
+                >
+                  <Volume2 size={15} />
+                </button>
+              </div>
               <p className="text-base md:text-lg text-white/80 font-medium leading-relaxed">{finalStep.chinese}</p>
               <p className="text-sm text-white/75 leading-relaxed">{finalStep.explanation}</p>
             </div>

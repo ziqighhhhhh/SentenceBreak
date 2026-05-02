@@ -145,7 +145,17 @@ function SentenceHistory({ sessions, loading, onSelectSession }: { sessions: rea
               <span className="rounded-full bg-primary-fixed px-3 py-1 text-xs font-bold text-primary">{session.sourceLabel}</span>
               <span className="text-xs font-bold uppercase tracking-[0.14em] text-ink-muted">{formatDate(session.createdAt)}</span>
             </div>
-            <p className="line-clamp-3 text-lg font-bold leading-snug text-ink">{session.sourceSentence}</p>
+            <div className="flex items-start gap-2">
+              <p className="line-clamp-3 text-lg font-bold leading-snug text-ink flex-1">{session.sourceSentence}</p>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); speakText(session.sourceSentence); }}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-primary transition-all hover:bg-primary/10"
+                aria-label={`Pronounce ${session.sourceSentence.slice(0, 30)}`}
+              >
+                <Volume2 size={16} />
+              </button>
+            </div>
             <div className="mt-4 flex flex-wrap gap-2 text-sm font-bold text-zinc-700">
               <span className="rounded-full bg-canvas-parchment px-3 py-1">{session.totalWords} words</span>
               <span className="rounded-full bg-canvas-parchment px-3 py-1">{session.breakdown.steps.length} steps</span>
