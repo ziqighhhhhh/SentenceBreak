@@ -12,13 +12,14 @@
     "start": "node dist-server/server.js",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test": "npm run build:server && node tests/openaiStream.test.mjs && node tests/vocabulary.test.mjs && node tests/auth.test.mjs",
+    "test": "npm run build:server && node tests/openaiStream.test.mjs && node tests/vocabulary.test.mjs && node tests/auth.test.mjs && node tests/learningRepository.test.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push"
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.6",
+    "@prisma/adapter-better-sqlite3": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
