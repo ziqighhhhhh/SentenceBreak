@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import type { SentenceBreakdown } from '../types';
 import { getAddedTextSegments } from '../utils/highlightDiff';
 import { HighlightedSentence } from './HighlightedSentence';
+import { VocabularyInsightList } from './VocabularyInsightList';
 
 interface StepCardProps {
   breakdown: SentenceBreakdown;
@@ -102,6 +103,7 @@ export function StepCard({ breakdown, currentStepIdx }: StepCardProps) {
           <p className="text-lg text-center font-medium text-zinc-800">
             {step.explanation}
           </p>
+          <VocabularyInsightList insights={step.vocabularyInsights ?? []} />
         </motion.div>
       </motion.div>
     </div>

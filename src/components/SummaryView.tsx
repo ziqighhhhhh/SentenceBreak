@@ -3,6 +3,7 @@ import { BookOpen, CheckCircle2, ChevronDown, Type } from 'lucide-react';
 import type { SentenceBreakdown } from '../types';
 import { getAddedTextSegments } from '../utils/highlightDiff';
 import { HighlightedSentence } from './HighlightedSentence';
+import { VocabularyInsightList } from './VocabularyInsightList';
 
 interface SummaryViewProps {
   breakdown: SentenceBreakdown;
@@ -19,6 +20,9 @@ export function SummaryView({
 }: SummaryViewProps) {
   const summarySteps = breakdown.steps.slice(0, -1);
   const finalStep = breakdown.steps[breakdown.steps.length - 1] ?? null;
+  const sessionInsights = breakdown.steps.flatMap((step) => step.vocabularyInsights ?? []);
+  const collocationCount = sessionInsights.filter((insight) => insight.type === 'collocation').length;
+  const meaningShiftCount = sessionInsights.filter((insight) => insight.type === 'meaning-shift').length;
   const summaryFinalSpan = [
     (breakdown.steps.length - 1) % 2 === 0 ? 'md:col-span-2' : 'md:col-span-1',
     (breakdown.steps.length - 1) % 3 === 0
@@ -112,6 +116,34 @@ export function SummaryView({
           </motion.article>
         )}
       </div>
+
+      {sessionInsights.length > 0 && (
+        <motion.section
+          className="mb-12 w-full max-w-[1320px] bg-zinc-100 p-6 md:p-8"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12, duration: 0.36 }}
+        >
+          <div className="mb-6 flex flex-col gap-4 text-left md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-zinc-900">This Session</h2>
+              <p className="mt-2 text-sm font-semibold text-zinc-500">Vocabulary and phrases surfaced while rebuilding this sentence.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-full bg-white px-4 py-2 text-sm font-bold text-zinc-800 ring-1 ring-zinc-200">
+                {sessionInsights.length} insights
+              </span>
+              <span className="rounded-full bg-white px-4 py-2 text-sm font-bold text-zinc-800 ring-1 ring-zinc-200">
+                {collocationCount} collocations
+              </span>
+              <span className="rounded-full bg-white px-4 py-2 text-sm font-bold text-zinc-800 ring-1 ring-zinc-200">
+                {meaningShiftCount} meaning shifts
+              </span>
+            </div>
+          </div>
+          <VocabularyInsightList insights={sessionInsights} compact />
+        </motion.section>
+      )}
 
       <div className="w-full max-w-[760px] bg-zinc-100 p-10 md:p-12 text-center border border-zinc-200">
         <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
