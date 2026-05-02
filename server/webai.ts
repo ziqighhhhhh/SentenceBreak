@@ -44,9 +44,53 @@ function assertBreakdown(value: SentenceBreakdown): SentenceBreakdown {
     ) {
       throw new Error("AI response included an invalid breakdown step.");
     }
+
+    if (step.vocabularyInsights !== undefined) {
+      if (!Array.isArray(step.vocabularyInsights) || step.vocabularyInsights.length > 3) {
+        throw new Error("AI response included invalid vocabulary insights.");
+      }
+
+      for (const insight of step.vocabularyInsights) {
+        if (
+          typeof insight?.text !== "string" ||
+          typeof insight?.normalizedText !== "string" ||
+          typeof insight?.senseKey !== "string" ||
+          !isVocabularyInsightType(insight?.type) ||
+          typeof insight?.meaningInContext !== "string" ||
+          typeof insight?.usageNote !== "string"
+        ) {
+          throw new Error("AI response included an invalid vocabulary insight.");
+        }
+
+        if (
+          (insight.dictionaryMeaning !== undefined && typeof insight.dictionaryMeaning !== "string") ||
+          (insight.phonetic !== undefined && typeof insight.phonetic !== "string") ||
+          (insight.pronunciationText !== undefined && typeof insight.pronunciationText !== "string") ||
+          (insight.example !== undefined && typeof insight.example !== "string") ||
+          (insight.synonyms !== undefined && !isStringArray(insight.synonyms)) ||
+          (insight.antonyms !== undefined && !isStringArray(insight.antonyms))
+        ) {
+          throw new Error("AI response included an invalid vocabulary insight.");
+        }
+      }
+    }
   }
 
   return value;
+}
+
+function isVocabularyInsightType(value: unknown): boolean {
+  return (
+    value === "word" ||
+    value === "phrase" ||
+    value === "collocation" ||
+    value === "idiom" ||
+    value === "meaning-shift"
+  );
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
 export async function generateBreakdownOnServer(sentence: string): Promise<SentenceBreakdown> {

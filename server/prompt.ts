@@ -1,15 +1,15 @@
 export function buildBreakdownPrompt(sentence: string): string {
   return `
-    You are an expert English teacher creating Xiaohongshu-style Chinese learning cards for English long-sentence breakdowns.
+    You are an expert English teacher creating concise Chinese learning cards for English long-sentence breakdowns.
 
     TARGET SENTENCE:
     "${sentence}"
 
     GOAL:
-    Turn the target sentence into a progressive card sequence for Chinese learners. The learner should first see the destination sentence, then a very simple base sentence, then rebuild the original sentence one learnable change at a time.
+    Turn the target sentence into a progressive card sequence for Chinese learners. The learner should first see the destination sentence, then a very simple base sentence, then rebuild the original sentence one learnable change at a time. Each step may also include focused vocabulary or phrase insights that help the learner understand external-reading style English.
 
     CORE WORKFLOW:
-    1. Identify the final target sentence and infer a short source label when possible, such as "BBC 长难句", "经济学人长难句", "考研长难句", "六级长难句", "新闻长难句", or "英语长难句".
+    1. Identify the final target sentence and infer a short source label when possible, such as "BBC 长难句", "经济学人长难句", "新闻长难句", "学术长难句", or "英语长难句".
     2. Reduce the target sentence to a very simple base sentence with the same core meaning or narrative role. Prefer Subject + verb + object/complement.
     3. Before writing the steps, plan the rebuild order. Preserve the final sentence's major clause skeleton early, then add local modifiers and details.
     4. Rebuild the target sentence one small change at a time. Each step should add, replace, move, or combine only one learnable element.
@@ -18,6 +18,7 @@ export function buildBreakdownPrompt(sentence: string): string {
        - a natural Chinese translation of the current English sentence
        - a numbered grammar/meaning label in concise Chinese
        - a short Chinese explanation of exactly what changed and why it matters
+       - optional vocabularyInsights for difficult words, phrases, collocations, idioms, or familiar-word-unfamiliar-meaning cases introduced or made important in that step
     6. The final step must exactly match the target sentence.
 
     PAGE AND STEP DESIGN RULES:
@@ -28,8 +29,19 @@ export function buildBreakdownPrompt(sentence: string): string {
     - Prefer semantic continuity over surface similarity. Do not keep vague placeholder verbs or clauses for many steps if the final verb or major clause can be introduced earlier.
     - Keep each Chinese explanation concrete: name the added, replaced, moved, or combined phrase and explain its function.
     - Use natural Chinese translations, not word-for-word translations.
-    - When a word or phrase may block comprehension, include a compact vocabulary note inside the explanation before the grammar point.
     - Do not over-explain common grammar. One clear Chinese sentence is usually enough.
+
+    VOCABULARY INSIGHT RULES:
+    - Each step can include 0 to 3 vocabularyInsights.
+    - Only include insights for expressions that materially affect comprehension in this sentence.
+    - Prefer external-reading useful items: familiar words with context-specific meaning, high-frequency news verbs, fixed phrases, collocations, idioms, abstract nouns, and logic connectors.
+    - Do not explain basic words unless their usage is unusual in context.
+    - Do not repeat the same normalizedText + senseKey across steps.
+    - If the same expression has a different meaning in context, keep it as a separate insight with a different senseKey.
+    - Synonyms and antonyms must match the current context, not the generic dictionary meaning.
+    - Return empty arrays for synonyms or antonyms when natural context-matched items are unavailable.
+    - For single words, include phonetic when you are confident. For phrases and collocations, phonetic may be omitted, but pronunciationText should be included.
+    - senseKey should be compact and stable, using normalizedText plus an English meaning label, such as "fuel concerns::intensify-concern".
 
     ORDERING HEURISTICS:
     1. Build the sentence spine first: main subject, main verb, core object/complement, and major connectors such as "but", "and", "because", "while", or dash appositives.
@@ -60,7 +72,7 @@ export function buildBreakdownPrompt(sentence: string): string {
     - The progression must not jump over a major phrase in the target sentence.
     - The order should feel motivated: readers understand the core event, contrast, or argument before dense modifiers.
     - Each chinese field must translate the current English sentence, not only the final sentence.
-    - The tone should be concise Xiaohongshu learning copy, not a long textbook lecture.
+    - vocabularyInsights must be concise and context-specific.
     - Return valid JSON only. Do not wrap it in markdown.
 
     OUTPUT FORMAT:
@@ -74,7 +86,23 @@ export function buildBreakdownPrompt(sentence: string): string {
           "english": "string",
           "chinese": "string",
           "label": "string",
-          "explanation": "string"
+          "explanation": "string",
+          "vocabularyInsights": [
+            {
+              "text": "string",
+              "normalizedText": "string",
+              "senseKey": "string",
+              "type": "word | phrase | collocation | idiom | meaning-shift",
+              "meaningInContext": "string",
+              "dictionaryMeaning": "string",
+              "usageNote": "string",
+              "phonetic": "string",
+              "pronunciationText": "string",
+              "synonyms": ["string"],
+              "antonyms": ["string"],
+              "example": "string"
+            }
+          ]
         }
       ],
       "totalSentences": number,
