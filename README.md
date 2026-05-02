@@ -3,11 +3,15 @@
 SentenceBreak is an AI-assisted English long-sentence breakdown app. It helps learners turn a complex English sentence into a step-by-step structural explanation, then navigate the sentence through animated cards.
 
 The app includes a React/Vite frontend, an Express server, OpenAI-compatible streaming API calls, rate limiting, input validation, and polished particle/text reveal interactions.
+It also supports invite-code beta users, enhanced vocabulary insights, and cloud learning records backed by SQLite.
 
 ## Features
 
 - Generate a complex English example sentence.
 - Analyze an English sentence into step-by-step breakdown cards.
+- Show context-specific vocabulary and phrase insights with synonyms, antonyms, phonetic text, and browser pronunciation.
+- Let beta users enter with an invite code and nickname.
+- Save completed breakdowns and accumulated vocabulary to My Learning.
 - Cache generated-sentence analysis silently so users can start the breakdown later without sending a duplicate request.
 - Stream analysis progress with Server-Sent Events.
 - Reject Chinese text and oversized input at the server boundary.
@@ -22,6 +26,8 @@ The app includes a React/Vite frontend, an Express server, OpenAI-compatible str
 - TypeScript
 - Tailwind CSS
 - Express
+- SQLite
+- Prisma
 - Server-Sent Events
 - `@chenglou/pretext` for text measurement and layout
 - `motion` for view transitions
@@ -36,12 +42,19 @@ src/
   types.ts           Shared breakdown data types
 
 server/
+  auth.ts            Invite-code beta session helpers
+  db.ts              Prisma client and SQLite adapter
+  learningRoutes.ts  Learning-record API routes
+  learningRepository.ts Learning-session and vocabulary persistence
   paths.ts           Client dist path resolution
   sse.ts             SSE event formatting helpers
   webai.ts           OpenAI-compatible API integration
 
 tests/
   openaiStream.test.mjs
+  auth.test.mjs
+  learningRepository.test.mjs
+  vocabulary.test.mjs
 
 server.ts            Express API and production static server
 vite.config.ts       Vite config and dev proxy
@@ -69,6 +82,8 @@ WEBAI2API_API_KEY="YOUR_TOKEN"
 WEBAI2API_MODEL="gemini-2.0-flash"
 PORT="8787"
 RATE_LIMIT_PER_MINUTE="20"
+DATABASE_URL="file:./data/sentencebreak.db"
+BETA_INVITE_CODES="alpha2026,beta2026"
 API_PROXY_TARGET="http://localhost:8787"
 ```
 
@@ -80,6 +95,13 @@ Install dependencies:
 
 ```bash
 npm install
+```
+
+Generate Prisma client and initialize the local SQLite database:
+
+```bash
+npm run db:generate
+npm run db:push
 ```
 
 Run the API server:
@@ -126,7 +148,10 @@ npm run build:server  Type-check/build server output
 npm run preview       Preview the Vite build
 npm start             Start the compiled production server
 npm run lint          Type-check the frontend
-npm test              Run server build and stream helper tests
+npm run db:generate   Generate Prisma client
+npm run db:push       Sync SQLite schema for local development
+npm run db:migrate    Create and apply Prisma migrations
+npm test              Run server build and tests
 ```
 
 ## API Endpoints
@@ -136,6 +161,11 @@ POST /api/sentence
 POST /api/sentence/stream
 POST /api/breakdown
 POST /api/breakdown/stream
+POST /api/test-users/session
+POST /api/learning-sessions
+GET  /api/learning-sessions
+GET  /api/vocabulary
+PATCH /api/vocabulary/:id/mastery
 GET  /api/health
 ```
 
@@ -148,6 +178,8 @@ The server:
 - Limits JSON request size.
 - Applies per-IP rate limiting.
 - Rejects empty, non-string, oversized, or Chinese-containing sentence input.
+- Validates beta invite sessions before reading or writing learning records.
+- Keeps each user's learning sessions and vocabulary isolated by server-derived user identity.
 - Sets common security headers, including CSP, frame protection, and content-type protection.
 - Keeps API credentials on the server side.
 
@@ -159,7 +191,7 @@ Run:
 npm test
 ```
 
-Current tests cover SSE formatting, OpenAI stream payload parsing, and server dist path resolution.
+Current tests cover SSE formatting, OpenAI stream payload parsing, server dist path resolution, vocabulary normalization, beta auth helpers, and learning-record persistence.
 
 ## Notes
 
