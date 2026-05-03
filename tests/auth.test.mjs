@@ -51,3 +51,13 @@ test("hashes tokens without returning the raw token", () => {
   assert.notEqual(hash, "secret-token");
   assert.equal(hash.length, 64);
 });
+
+test("removes the invite code from the pool after first registration", async () => {
+  const inviteCode = `auth-pool-${randomUUID()}`;
+  process.env.BETA_INVITE_CODES = inviteCode;
+
+  await createOrResumeBetaSession(inviteCode, "PoolUser");
+
+  const dbCode = await isInviteCodeAllowed(inviteCode, "");
+  assert.equal(dbCode, false, "Invite code should be removed from the pool after registration");
+});

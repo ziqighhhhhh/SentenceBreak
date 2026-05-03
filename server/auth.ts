@@ -80,6 +80,10 @@ export async function createOrResumeBetaSession(inviteCodeInput: unknown, nickna
         data: { inviteCode, nickname },
       });
 
+  if (!existingUser) {
+    await prisma.inviteCode.deleteMany({ where: { code: inviteCode } });
+  }
+
   const rawToken = createRawSessionToken();
   const tokenHash = hashSessionToken(rawToken);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
