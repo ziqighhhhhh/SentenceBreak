@@ -50,7 +50,7 @@ export function SummaryView({
         <p className="text-xl text-zinc-500 max-w-2xl mx-auto font-medium">The complete rebuild path from the base sentence to the final target.</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 relative mb-12 w-full max-w-[1320px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative mb-12 w-full max-w-[1320px]">
         {summarySteps.map((step, index) => {
           const previousStep = breakdown.steps[index - 1];
           const highlightedSentence = previousStep
@@ -60,7 +60,7 @@ export function SummaryView({
           return (
             <motion.article
               key={`${step.pageNumber}-${index}`}
-              className="relative z-10 bg-white p-5 md:p-6 border border-zinc-200 flex flex-col gap-4 min-h-[260px]"
+              className="relative z-10 bg-white p-5 md:p-6 border border-zinc-200 flex flex-col gap-4 min-h-[280px]"
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: Math.min(index * 0.04, 0.28), duration: 0.36 }}
@@ -72,14 +72,14 @@ export function SummaryView({
                 </div>
               </div>
               <div className="min-w-0 text-left flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-lg font-bold text-zinc-900 leading-snug">
-                      <HighlightedSentence segments={highlightedSentence} grammarBlocks={step.grammarBlocks} compact />
-                    </p>
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <HighlightedSentence segments={highlightedSentence} grammarBlocks={step.grammarBlocks} compact />
+                  </div>
                   <button
                     type="button"
                     onClick={() => speakText(step.english)}
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-primary transition-all hover:bg-primary/10"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-primary transition-all hover:bg-primary/10 self-start mt-1"
                     aria-label={`Pronounce step ${index + 1}`}
                   >
                     <Volume2 size={15} />

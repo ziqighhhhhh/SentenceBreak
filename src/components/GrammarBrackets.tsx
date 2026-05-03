@@ -26,8 +26,9 @@ export function GrammarBrackets({ blocks, segments, compact }: GrammarBracketsPr
   const size = compact ? 'compact' : 'normal';
   const isNewSet = computeNewSet(segments);
 
+  /* min-w-0 is critical: allows the flex container to shrink in narrow parents (e.g. SummaryView cards) */
   return (
-    <div className={`flex flex-wrap ${GAP[size]} justify-center w-full`}>
+    <div className={`flex flex-wrap ${GAP[size]} justify-center w-full min-w-0`}>
       {blocks.map((block, i) => (
         <GrammarBlockItem
           key={i}
@@ -54,12 +55,13 @@ function isPunctuationOnly(text: string): boolean {
  * Pure natural-flow layout — zero absolute positioning.
  *
  *   "The cat"
+ *      主
  *   ┌────────┐
- *   │(text)  │   ← invisible span, sets bracket width
+ *   │(text)  │
  *   └────────┘
- *    主
  *
- * Punctuation-only blocks (e.g. ".") render as plain text without brackets.
+ * Uses min-w-0 (not shrink-0) to enable proper flex-wrap in narrow cards.
+ * Compact mode removes excess vertical spacing for SummaryView cards.
  */
 function GrammarBlockItem({ block, hasHighlight, size }: GrammarBlockItemProps) {
   if (isPunctuationOnly(block.text)) {
@@ -73,47 +75,52 @@ function GrammarBlockItem({ block, hasHighlight, size }: GrammarBlockItemProps) 
   const bw = size === 'compact' ? '1.5px' : '2.5px';
   const bracketH = size === 'compact' ? 14 : 18;
   const lblSize = size === 'compact' ? '13px' : '16px';
+  const isC = size === 'compact';
 
   return (
-    <div className="inline-flex flex-col items-center shrink-0 gap-0">
+    /* inline-flex + min-w-0: enables flex-wrap in narrow parents; shrink-0 would break wrapping */
+    <span className={`inline-flex flex-col items-center min-w-0 gap-0 ${isC ? '' : 'min-h-[44px]'}`}>
       {/* 单词文本 */}
       <span className={`font-bold whitespace-nowrap px-1 ${WORD_SIZE[size]} leading-none ${hasHighlight ? 'text-primary' : 'text-zinc-900'}`}>
         {block.text}
       </span>
 
-      {/* 隐形撑宽文字 */}
-      <span className={`invisible whitespace-nowrap ${WORD_SIZE[size]} font-bold px-1 select-none leading-none`} aria-hidden="true">
-        {block.text}
-      </span>
-
-      {/* L 型括号 */}
-      <span
-        className="inline-block"
-        style={{
-          borderTop: 'none',
-          borderLeft: `${bw} solid ${hasHighlight ? 'var(--color-primary)' : c.color}`,
-          borderBottom: `${bw} solid ${hasHighlight ? 'var(--color-primary)' : c.color}`,
-          borderRight: `${bw} solid ${hasHighlight ? 'var(--color-primary)' : c.color}`,
-          borderBottomLeftRadius: '6px',
-          borderBottomRightRadius: '6px',
-          width: '100%',
-          height: `${bracketH}px`,
-        }}
-      />
-
-      {/* 中文标签 — 加大加粗，自然流定位 */}
+      {/* 中文标签 — 紧贴文本下方 */}
       <span
         className="font-black text-center leading-none select-none"
         style={{
           fontSize: lblSize,
           color: hasHighlight ? 'var(--color-primary)' : c.color,
           letterSpacing: '0.05em',
-          marginTop: size === 'compact' ? '1px' : '-2px',
+          lineHeight: 1,
+          marginTop: isC ? '0px' : '2px',
         }}
       >
         {c.label}
       </span>
-    </div>
+
+      {/* bracket 区域 — normal 模式用 mt-1 拉开间距，compact 模式紧贴 */}
+      <span className={`relative flex flex-col items-center w-full ${isC ? '' : 'mt-1'}`}>
+        {/* 隐形撑宽文字 — 确保括号宽度与文字匹配 */}
+        <span className={`invisible whitespace-nowrap ${WORD_SIZE[size]} font-bold px-1 select-none leading-none`} aria-hidden="true">
+          {block.text}
+        </span>
+
+        {/* L 型括号 — 贴底 */}
+        <span
+          className="relative inline-block w-full mt-auto"
+          style={{
+            borderBottom: 'none',
+            borderLeft: `${bw} solid ${hasHighlight ? 'var(--color-primary)' : c.color}`,
+            borderTop: `${bw} solid ${hasHighlight ? 'var(--color-primary)' : c.color}`,
+            borderRight: `${bw} solid ${hasHighlight ? 'var(--color-primary)' : c.color}`,
+            borderTopLeftRadius: '6px',
+            borderTopRightRadius: '6px',
+            height: `${bracketH}px`,
+          }}
+        />
+      </span>
+    </span>
   );
 }
 
