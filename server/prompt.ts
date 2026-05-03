@@ -66,6 +66,18 @@ export function buildBreakdownPrompt(sentence: string): string {
     - "9 非限制性定语从句"
     - "10 固定搭配"
 
+    GRAMMAR ANATOMY:
+    After building all steps, provide a "grammarAnatomy" array that breaks the FINAL target sentence into contiguous grammar blocks. Each block covers a contiguous span of text (no gaps, no overlaps) and the combined text of all blocks must exactly equal the target sentence.
+
+    For each block, include:
+    - "text": the exact text span from the target sentence
+    - "role": one of "subject", "predicate", "object", "modifier", "adverbial", "complement", "connector", "other"
+    - "roleLabel": a concise Chinese label for the role, e.g. "主语", "谓语", "宾语", "定语", "状语", "补语", "连接词", "其它"
+
+    Also provide a short "anatomyNote" (1-2 Chinese sentences) pointing out the most notable structural feature of this sentence, such as a separated subject-verb pair, stacked modifiers, or a complex clause.
+
+    If you cannot confidently produce a clean anatomy, return an empty array for grammarAnatomy.
+
     QUALITY CHECK BEFORE RETURNING:
     - The final step's english field must exactly match the target sentence.
     - Every step must be grammatical unless it is intentionally quoted source text.
@@ -105,6 +117,14 @@ export function buildBreakdownPrompt(sentence: string): string {
           ]
         }
       ],
+      "grammarAnatomy": [
+        {
+          "text": "string",
+          "role": "subject | predicate | object | modifier | adverbial | complement | connector | other",
+          "roleLabel": "string"
+        }
+      ],
+      "anatomyNote": "string",
       "totalSentences": number,
       "totalWords": number
     }

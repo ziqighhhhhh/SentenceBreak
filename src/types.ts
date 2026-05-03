@@ -24,10 +24,28 @@ export interface BreakdownStep {
   vocabularyInsights?: VocabularyInsight[];
 }
 
+export interface GrammarBlock {
+  text: string;
+  role: GrammarRole;
+  roleLabel: string;
+}
+
+export type GrammarRole =
+  | 'subject'
+  | 'predicate'
+  | 'object'
+  | 'modifier'
+  | 'adverbial'
+  | 'complement'
+  | 'connector'
+  | 'other';
+
 export interface SentenceBreakdown {
   sourceLabel: string;
   targetSentence: string;
   steps: BreakdownStep[];
+  grammarAnatomy?: GrammarBlock[];
+  anatomyNote?: string;
   totalSentences: number;
   totalWords: number;
 }

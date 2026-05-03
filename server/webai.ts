@@ -1,4 +1,15 @@
 import type { SentenceBreakdown } from "../src/types.js";
+
+const VALID_ROLES = new Set([
+  "subject",
+  "predicate",
+  "object",
+  "modifier",
+  "adverbial",
+  "complement",
+  "connector",
+  "other",
+]);
 import { readOpenAIStream } from "./openaiStream.js";
 import { buildBreakdownPrompt, buildComplexSentencePrompt } from "./prompt.js";
 
@@ -74,6 +85,23 @@ function assertBreakdown(value: SentenceBreakdown): SentenceBreakdown {
         }
       }
     }
+  }
+
+  if (value.grammarAnatomy !== undefined && Array.isArray(value.grammarAnatomy)) {
+    for (const block of value.grammarAnatomy) {
+      if (
+        typeof block?.text !== "string" ||
+        typeof block?.role !== "string" ||
+        typeof block?.roleLabel !== "string" ||
+        !VALID_ROLES.has(block.role)
+      ) {
+        throw new Error("AI response included an invalid grammar anatomy block.");
+      }
+    }
+  }
+
+  if (value.anatomyNote !== undefined && typeof value.anatomyNote !== "string") {
+    throw new Error("AI response included an invalid anatomyNote.");
   }
 
   return value;

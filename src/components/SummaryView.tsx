@@ -4,6 +4,7 @@ import type { SaveStatus } from '../hooks/useLearningRecords';
 import type { SentenceBreakdown } from '../types';
 import { getAddedTextSegments } from '../utils/highlightDiff';
 import { speakText } from '../utils/speech';
+import { GrammarAnatomyView } from './GrammarAnatomyView';
 import { HighlightedSentence } from './HighlightedSentence';
 import { VocabularyInsightList } from './VocabularyInsightList';
 
@@ -173,6 +174,14 @@ export function SummaryView({
           </div>
           <VocabularyInsightList insights={sessionInsights} compact />
         </motion.section>
+      )}
+
+      {breakdown.grammarAnatomy && breakdown.grammarAnatomy.length > 0 && (
+        <GrammarAnatomyView
+          blocks={breakdown.grammarAnatomy}
+          note={breakdown.anatomyNote}
+          targetSentence={breakdown.targetSentence}
+        />
       )}
 
       <div className="w-full max-w-[760px] bg-zinc-100 p-10 md:p-12 text-center border border-zinc-200">
