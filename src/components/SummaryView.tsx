@@ -1,12 +1,46 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { BookOpen, CheckCircle2, ChevronDown, Loader2, RotateCw, Type, Volume2 } from 'lucide-react';
 import type { SaveStatus } from '../hooks/useLearningRecords';
-import type { SentenceBreakdown } from '../types';
+import type { GrammarBlock, SentenceBreakdown } from '../types';
 import { getAddedTextSegments } from '../utils/highlightDiff';
 import { speakText } from '../utils/speech';
-import { GrammarAnatomyView } from './GrammarAnatomyView';
+import { GrammarBrackets } from './GrammarBrackets';
 import { HighlightedSentence } from './HighlightedSentence';
 import { VocabularyInsightList } from './VocabularyInsightList';
+
+const ROLE_LABEL_FULL: Record<string, string> = {
+  subject: '主语',
+  predicate: '谓语',
+  object: '宾语',
+  modifier: '定语',
+  adverbial: '状语',
+  complement: '补语',
+  connector: '连接词',
+  other: '其它',
+};
+
+const ROLE_DOT: Record<string, string> = {
+  subject: 'bg-blue-500',
+  predicate: 'bg-red-500',
+  object: 'bg-purple-500',
+  modifier: 'bg-amber-500',
+  adverbial: 'bg-teal-500',
+  complement: 'bg-orange-500',
+  connector: 'bg-pink-500',
+  other: 'bg-zinc-400',
+};
+
+function getUniqueRoles(blocks: GrammarBlock[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const block of blocks) {
+    if (!seen.has(block.role)) {
+      seen.add(block.role);
+      result.push(block.role);
+    }
+  }
+  return result;
+}
 
 interface SummaryViewProps {
   breakdown: SentenceBreakdown;
@@ -118,31 +152,58 @@ export function SummaryView({
 
         {finalStep && (
           <motion.article
-            className={`relative z-10 bg-primary p-5 md:p-6 flex flex-col gap-4 min-h-[260px] ${summaryFinalSpan}`}
+            className={`relative z-10 bg-white border border-zinc-200 p-5 md:p-6 flex flex-col gap-4 min-h-[260px] ${summaryFinalSpan}`}
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: Math.min(summarySteps.length * 0.04, 0.32), duration: 0.36 }}
           >
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[12px] font-bold text-primary-fixed uppercase tracking-widest">{finalStep.label || 'Final Target'}</span>
-              <div className="w-11 h-11 rounded-full bg-primary-container flex items-center justify-center shrink-0">
-                <CheckCircle2 size={26} className="text-white" />
+              <span className="text-[12px] font-bold text-primary uppercase tracking-widest">{finalStep.label || 'Final Target'}</span>
+              <div className="flex items-center gap-2">
+                {finalStep.english && (
+                  <button
+                    type="button"
+                    onClick={() => speakText(finalStep.english || breakdown.targetSentence)}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-primary transition-all hover:bg-primary/10"
+                    aria-label="Pronounce final sentence"
+                  >
+                    <Volume2 size={15} />
+                  </button>
+                )}
+                <div className="w-11 h-11 rounded-full bg-zinc-50 flex items-center justify-center shrink-0 border border-zinc-100">
+                  <CheckCircle2 size={26} className="text-primary" />
+                </div>
               </div>
             </div>
-            <div className="text-white min-w-0 text-left flex flex-col gap-3">
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-2xl md:text-3xl font-bold leading-tight">{finalStep.english || breakdown.targetSentence}</p>
-                <button
-                  type="button"
-                  onClick={() => speakText(finalStep.english || breakdown.targetSentence)}
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/20 hover:text-white"
-                  aria-label="Pronounce final sentence"
-                >
-                  <Volume2 size={15} />
-                </button>
-              </div>
-              <p className="text-base md:text-lg text-white/80 font-medium leading-relaxed">{finalStep.chinese}</p>
-              <p className="text-sm text-white/75 leading-relaxed">{finalStep.explanation}</p>
+            <div className="min-w-0 text-left flex flex-col gap-3">
+              {breakdown.grammarAnatomy && breakdown.grammarAnatomy.length > 0 ? (
+                <GrammarBrackets
+                  blocks={breakdown.grammarAnatomy}
+                  segments={breakdown.grammarAnatomy.map(() => ({ text: '', highlighted: false }))}
+                  sentenceText={finalStep.english || breakdown.targetSentence}
+                  compact
+                />
+              ) : (
+                <p className="text-2xl md:text-3xl font-bold leading-tight text-zinc-900">{finalStep.english || breakdown.targetSentence}</p>
+              )}
+              <p className="text-sm text-zinc-500 font-medium leading-relaxed">{finalStep.chinese}</p>
+
+              {breakdown.grammarAnatomy && breakdown.grammarAnatomy.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {getUniqueRoles(breakdown.grammarAnatomy).map((role) => (
+                    <span key={role} className="inline-flex items-center gap-1 text-[11px] font-bold text-zinc-600">
+                      <span className={`size-2 rounded-full ${ROLE_DOT[role] ?? ROLE_DOT.other}`} />
+                      {ROLE_LABEL_FULL[role] ?? role}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {breakdown.anatomyNote && (
+                <p className="text-sm text-zinc-500 leading-relaxed">{breakdown.anatomyNote}</p>
+              )}
+
+              <p className="text-sm text-zinc-700 leading-relaxed">{finalStep.explanation}</p>
             </div>
           </motion.article>
         )}
@@ -174,14 +235,6 @@ export function SummaryView({
           </div>
           <VocabularyInsightList insights={sessionInsights} compact />
         </motion.section>
-      )}
-
-      {breakdown.grammarAnatomy && breakdown.grammarAnatomy.length > 0 && (
-        <GrammarAnatomyView
-          blocks={breakdown.grammarAnatomy}
-          note={breakdown.anatomyNote}
-          targetSentence={breakdown.targetSentence}
-        />
       )}
 
       <div className="w-full max-w-[760px] bg-zinc-100 p-10 md:p-12 text-center border border-zinc-200">
