@@ -46,6 +46,10 @@ interface GrammarBlockItemProps {
   size: 'normal' | 'compact';
 }
 
+function isPunctuationOnly(text: string): boolean {
+  return !/[a-zA-Z0-9\u4e00-\u9fff\u3000-\u9fff]/.test(text.trim());
+}
+
 /**
  * Pure natural-flow layout — zero absolute positioning.
  *
@@ -55,9 +59,16 @@ interface GrammarBlockItemProps {
  *   └────────┘
  *    主
  *
- * All three rows flow naturally; flex-wrap wraps at block boundary.
+ * Punctuation-only blocks (e.g. ".") render as plain text without brackets.
  */
 function GrammarBlockItem({ block, hasHighlight, size }: GrammarBlockItemProps) {
+  if (isPunctuationOnly(block.text)) {
+    return (
+      <span className={`font-bold whitespace-nowrap px-1 ${WORD_SIZE[size]} leading-none text-zinc-900`}>
+        {block.text}
+      </span>
+    );
+  }
   const c = ROLE_META[block.role] ?? ROLE_META.other;
   const bw = size === 'compact' ? '1.5px' : '2.5px';
   const bracketH = size === 'compact' ? 14 : 18;
