@@ -29,6 +29,7 @@ export interface GrammarBlock {
   text: string;
   role: GrammarRole;
   roleLabel: string;
+  layer?: number;
 }
 
 export type GrammarRole =

@@ -13,7 +13,7 @@ export function buildBreakdownPrompt(sentence: string): string {
     For each grammar block:
     - "text": the exact text span
     - "role": one of "subject", "predicate", "object", "modifier", "adverbial", "complement", "connector", "other"
-    - "roleLabel": a concise Chinese label, e.g. "主语", "谓语", "宾语", "定语", "状语", "补语", "连接词", "其它"
+    - "roleLabel": a SINGLE Chinese character label: "主"(subject), "谓"(predicate), "宾"(object), "定"(modifier), "状"(adverbial), "补"(complement), "连"(connector), "其"(other)
 
     Rules for grammar blocks:
     - Cover all meaningful words in the sentence, not just the main structure.
@@ -84,7 +84,7 @@ export function buildBreakdownPrompt(sentence: string): string {
     For each block, include:
     - "text": the exact text span from the target sentence
     - "role": one of "subject", "predicate", "object", "modifier", "adverbial", "complement", "connector", "other"
-    - "roleLabel": a concise Chinese label for the role, e.g. "主语", "谓语", "宾语", "定语", "状语", "补语", "连接词", "其它"
+    - "roleLabel": a SINGLE Chinese character: "主"(subject), "谓"(predicate), "宾"(object), "定"(modifier), "状"(adverbial), "补"(complement), "连"(connector), "其"(other)
 
     Also provide a short "anatomyNote" (1-2 Chinese sentences) pointing out the most notable structural feature of this sentence, such as a separated subject-verb pair, stacked modifiers, or a complex clause.
 

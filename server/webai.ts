@@ -34,6 +34,17 @@ function parseBreakdown(content: string): SentenceBreakdown {
   return JSON.parse(jsonText) as SentenceBreakdown;
 }
 
+function isValidGrammarBlock(block: unknown): boolean {
+  if (!block || typeof block !== "object") return false;
+  const b = block as Record<string, unknown>;
+  if (typeof b.text !== "string" || typeof b.role !== "string" || typeof b.roleLabel !== "string") return false;
+  if (!VALID_ROLES.has(b.role)) return false;
+  if (b.layer !== undefined) {
+    if (typeof b.layer !== "number" || b.layer < 0 || !Number.isInteger(b.layer)) return false;
+  }
+  return true;
+}
+
 function assertBreakdown(value: SentenceBreakdown): SentenceBreakdown {
   if (
     typeof value?.sourceLabel !== "string" ||
@@ -92,12 +103,7 @@ function assertBreakdown(value: SentenceBreakdown): SentenceBreakdown {
       }
 
       for (const block of step.grammarBlocks) {
-        if (
-          typeof block?.text !== "string" ||
-          typeof block?.role !== "string" ||
-          typeof block?.roleLabel !== "string" ||
-          !VALID_ROLES.has(block.role)
-        ) {
+        if (!isValidGrammarBlock(block)) {
           throw new Error("AI response included an invalid grammar block.");
         }
       }
@@ -106,12 +112,7 @@ function assertBreakdown(value: SentenceBreakdown): SentenceBreakdown {
 
   if (value.grammarAnatomy !== undefined && Array.isArray(value.grammarAnatomy)) {
     for (const block of value.grammarAnatomy) {
-      if (
-        typeof block?.text !== "string" ||
-        typeof block?.role !== "string" ||
-        typeof block?.roleLabel !== "string" ||
-        !VALID_ROLES.has(block.role)
-      ) {
+      if (!isValidGrammarBlock(block)) {
         throw new Error("AI response included an invalid grammar anatomy block.");
       }
     }
