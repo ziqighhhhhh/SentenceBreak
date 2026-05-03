@@ -30,6 +30,7 @@
   .particle-morph {
     position: relative;
     isolation: isolate;
+    width: 100%;
   }
 
   .particle-morph__canvas {

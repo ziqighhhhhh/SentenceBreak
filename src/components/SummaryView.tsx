@@ -84,7 +84,7 @@ export function SummaryView({
         <p className="text-xl text-zinc-500 max-w-2xl mx-auto font-medium">The complete rebuild path from the base sentence to the final target.</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative mb-12 w-full max-w-[1320px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 relative mb-12 w-full max-w-[1320px]">
         {summarySteps.map((step, index) => {
           const previousStep = breakdown.steps[index - 1];
           const highlightedSentence = previousStep
@@ -94,7 +94,7 @@ export function SummaryView({
           return (
             <motion.article
               key={`${step.pageNumber}-${index}`}
-              className="relative z-10 bg-white p-5 md:p-6 border border-zinc-200 flex flex-col gap-4 min-h-[280px]"
+              className="relative z-10 bg-white p-5 md:p-6 border border-zinc-200 flex flex-col gap-4 min-h-[280px] overflow-hidden"
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: Math.min(index * 0.04, 0.28), duration: 0.36 }}
@@ -105,7 +105,7 @@ export function SummaryView({
                   <span className="text-sm font-bold text-primary">{String(index + 1).padStart(2, '0')}</span>
                 </div>
               </div>
-            <div className="min-w-0 overflow-hidden text-left flex flex-col gap-3">
+              <div className="min-w-0 overflow-hidden text-left flex flex-col gap-3">
                 <div className="flex items-start gap-2">
                   <div className="min-w-0 flex-1">
                     <HighlightedSentence segments={highlightedSentence} grammarBlocks={step.grammarBlocks} compact />
@@ -152,7 +152,7 @@ export function SummaryView({
 
         {finalStep && (
           <motion.article
-            className={`relative z-10 bg-white border border-zinc-200 p-5 md:p-6 flex flex-col gap-4 min-h-[260px] ${summaryFinalSpan}`}
+            className={`relative z-10 bg-white border border-zinc-200 p-5 md:p-6 flex flex-col gap-4 min-h-[260px] overflow-hidden ${summaryFinalSpan}`}
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: Math.min(summarySteps.length * 0.04, 0.32), duration: 0.36 }}

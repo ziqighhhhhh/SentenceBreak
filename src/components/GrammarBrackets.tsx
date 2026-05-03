@@ -26,9 +26,18 @@ const LABEL_GAP: Record<string, string> = { normal: 'gap-1', compact: 'gap-0.5' 
 const DESCENDER_PB: Record<string, string> = { normal: 'pb-1', compact: 'pb-0.5' };
 const BRACKET_GAP: Record<string, string> = { normal: 'gap-0.5', compact: 'gap-px' };
 
-export function GrammarBrackets({ blocks, segments, compact, inverted }: GrammarBracketsProps) {
+export function GrammarBrackets({ blocks, segments, sentenceText, compact, inverted }: GrammarBracketsProps) {
   const size = compact ? 'compact' : 'normal';
   const newWordSet = computeNewSet(segments);
+
+  if (!blocks || blocks.length === 0) {
+    const fallbackSize = compact ? 'text-sm' : 'text-2xl md:text-3xl';
+    return (
+      <p className={`font-bold leading-tight ${fallbackSize} ${inverted ? 'text-white' : 'text-zinc-900'}`}>
+        {sentenceText}
+      </p>
+    );
+  }
 
   return (
     <div className={`flex flex-wrap ${GAP[size]} justify-center w-full min-w-0 overflow-hidden`}>
