@@ -8,6 +8,16 @@ import { GrammarAnatomyView } from './GrammarAnatomyView';
 import { HighlightedSentence } from './HighlightedSentence';
 import { VocabularyInsightList } from './VocabularyInsightList';
 
+const LEGEND_ITEMS = [
+  { label: '主语', color: 'bg-blue-400' },
+  { label: '谓语', color: 'bg-red-400' },
+  { label: '宾语', color: 'bg-purple-400' },
+  { label: '定语', color: 'bg-indigo-400' },
+  { label: '状语', color: 'bg-amber-400' },
+  { label: '补语', color: 'bg-teal-400' },
+  { label: '连接词', color: 'bg-pink-400' },
+];
+
 interface SummaryViewProps {
   breakdown: SentenceBreakdown;
   expandedSummarySteps: ReadonlySet<number>;
@@ -49,6 +59,8 @@ export function SummaryView({
         <h1 className="text-4xl md:text-5xl font-bold text-zinc-900 mb-4">Sentence Assembly</h1>
         <p className="text-xl text-zinc-500 max-w-2xl mx-auto font-medium">The complete rebuild path from the base sentence to the final target.</p>
       </header>
+
+      <GrammarLegend />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 relative mb-12 w-full max-w-[1320px]">
         {summarySteps.map((step, index) => {
@@ -260,6 +272,19 @@ function SaveStatusNotice({
         <RotateCw size={15} />
         Retry save
       </button>
+    </div>
+  );
+}
+
+function GrammarLegend() {
+  return (
+    <div className="mb-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm font-bold text-zinc-500">
+      {LEGEND_ITEMS.map((item) => (
+        <span key={item.label} className="inline-flex items-center gap-1.5">
+          <span className={`size-2.5 rounded-full ${item.color}`} />
+          {item.label}
+        </span>
+      ))}
     </div>
   );
 }

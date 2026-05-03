@@ -8,15 +8,26 @@ interface GrammarAnatomyViewProps {
   targetSentence: string;
 }
 
-const ROLE_STYLES: Record<string, string> = {
-  subject: 'bg-blue-100 text-blue-800 ring-blue-200',
-  predicate: 'bg-red-100 text-red-800 ring-red-200',
-  object: 'bg-purple-100 text-purple-800 ring-purple-200',
-  modifier: 'bg-indigo-100 text-indigo-800 ring-indigo-200',
-  adverbial: 'bg-amber-100 text-amber-800 ring-amber-200',
-  complement: 'bg-teal-100 text-teal-800 ring-teal-200',
-  connector: 'bg-pink-100 text-pink-800 ring-pink-200',
-  other: 'bg-zinc-100 text-zinc-600 ring-zinc-200',
+const ROLE_BORDER: Record<string, string> = {
+  subject: 'border-b-2 border-blue-400/70',
+  predicate: 'border-b-2 border-red-400/70',
+  object: 'border-b-2 border-purple-400/70',
+  modifier: 'border-b-2 border-indigo-400/70',
+  adverbial: 'border-b-2 border-amber-400/70',
+  complement: 'border-b-2 border-teal-400/70',
+  connector: 'border-b-2 border-pink-400/70',
+  other: '',
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  subject: 'blue',
+  predicate: 'red',
+  object: 'purple',
+  modifier: 'indigo',
+  adverbial: 'amber',
+  complement: 'teal',
+  connector: 'pink',
+  other: 'zinc',
 };
 
 const ROLE_NAME_MAP: Record<string, string> = {
@@ -53,7 +64,7 @@ export function GrammarAnatomyView({ blocks, note, targetSentence }: GrammarAnat
           {blocks.map((block, index) => (
             <span
               key={`${block.text}-${index}`}
-              className={`inline-block rounded-lg px-1.5 py-0.5 ring-1 ${ROLE_STYLES[block.role] ?? ROLE_STYLES.other}`}
+              className={`inline-block px-1 py-0.5 ${ROLE_BORDER[block.role] ?? ''}`}
             >
               {block.text}
             </span>
@@ -61,17 +72,18 @@ export function GrammarAnatomyView({ blocks, note, targetSentence }: GrammarAnat
         </div>
 
         <div className="flex flex-wrap gap-3 mb-6">
-          {getUniqueRoles(blocks).map((role) => (
-            <span
-              key={role}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 ring-1 text-xs font-bold ${
-                ROLE_STYLES[role] ?? ROLE_STYLES.other
-              }`}
-            >
-              <span className="size-2 rounded-full bg-current" />
-              {ROLE_NAME_MAP[role] ?? role}
-            </span>
-          ))}
+          {getUniqueRoles(blocks).map((role) => {
+            const color = ROLE_COLORS[role] ?? 'zinc';
+            return (
+              <span
+                key={role}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-600"
+              >
+                <span className={`size-2.5 rounded-full bg-${color}-400`} />
+                {ROLE_NAME_MAP[role] ?? role}
+              </span>
+            );
+          })}
         </div>
 
         {note && (

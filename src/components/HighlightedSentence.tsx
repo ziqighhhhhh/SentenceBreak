@@ -1,27 +1,18 @@
 import type { HighlightSegment } from '../utils/highlightDiff';
 import type { GrammarBlock } from '../types';
 
-const ROLE_BG: Record<string, string> = {
-  subject: 'bg-blue-200/60',
-  predicate: 'bg-red-200/60',
-  object: 'bg-purple-200/60',
-  modifier: 'bg-indigo-200/60',
-  adverbial: 'bg-amber-200/60',
-  complement: 'bg-teal-200/60',
-  connector: 'bg-pink-200/60',
-  other: 'bg-zinc-200/60',
+const ROLE_BORDER: Record<string, string> = {
+  subject: 'border-b-2 border-blue-400/70',
+  predicate: 'border-b-2 border-red-400/70',
+  object: 'border-b-2 border-purple-400/70',
+  modifier: 'border-b-2 border-indigo-400/70',
+  adverbial: 'border-b-2 border-amber-400/70',
+  complement: 'border-b-2 border-teal-400/70',
+  connector: 'border-b-2 border-pink-400/70',
+  other: '',
 };
 
-const ROLE_RING: Record<string, string> = {
-  subject: 'ring-blue-300',
-  predicate: 'ring-red-300',
-  object: 'ring-purple-300',
-  modifier: 'ring-indigo-300',
-  adverbial: 'ring-amber-300',
-  complement: 'ring-teal-300',
-  connector: 'ring-pink-300',
-  other: 'ring-zinc-300',
-};
+const NEW_HL = 'rounded-lg bg-primary/10 px-1 text-primary ring-1 ring-primary/10';
 
 interface HighlightedSentenceProps {
   segments: HighlightSegment[];
@@ -41,11 +32,11 @@ export function HighlightedSentence({ segments, grammarBlocks }: HighlightedSent
     <>
       {grammarBlocks.map((block, idx) => {
         const hasNew = blockContainsHighlightedToken(block, highlightedTokens);
+        const baseClass = ROLE_BORDER[block.role] ?? '';
+        const hlClass = hasNew ? NEW_HL : '';
+        const cls = `${baseClass} ${hlClass}`.trim();
         return (
-          <span
-            key={idx}
-            className={getClasses(hasNew, block.role)}
-          >
+          <span key={idx} className={cls || undefined}>
             {block.text}
           </span>
         );
@@ -60,7 +51,7 @@ function RenderSegments({ segments }: { segments: HighlightSegment[] }) {
       {segments.map((seg, idx) => {
         if (!seg.highlighted) return <span key={idx}>{seg.text}</span>;
         return (
-          <span key={idx} className="rounded px-0.5 underline underline-offset-2">
+          <span key={idx} className={NEW_HL}>
             {seg.text}
           </span>
         );
@@ -92,11 +83,4 @@ function blockContainsHighlightedToken(
     if (n.length > 0 && highlightedTokens.has(n)) return true;
   }
   return false;
-}
-
-function getClasses(highlighted: boolean, role: string): string {
-  if (highlighted) {
-    return `${ROLE_BG[role] ?? ROLE_BG.other} ${ROLE_RING[role] ?? ROLE_RING.other} ring-1 rounded px-0.5 underline underline-offset-2`;
-  }
-  return `${ROLE_BG[role] ?? ROLE_BG.other} ${ROLE_RING[role] ?? ROLE_RING.other} ring-1 rounded px-0.5`;
 }
