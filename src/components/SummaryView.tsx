@@ -105,7 +105,7 @@ export function SummaryView({
                   <span className="text-sm font-bold text-primary">{String(index + 1).padStart(2, '0')}</span>
                 </div>
               </div>
-              <div className="min-w-0 text-left flex flex-col gap-3">
+            <div className="min-w-0 overflow-hidden text-left flex flex-col gap-3">
                 <div className="flex items-start gap-2">
                   <div className="min-w-0 flex-1">
                     <HighlightedSentence segments={highlightedSentence} grammarBlocks={step.grammarBlocks} compact />
@@ -175,7 +175,7 @@ export function SummaryView({
                 </div>
               </div>
             </div>
-            <div className="min-w-0 text-left flex flex-col gap-3">
+              <div className="min-w-0 overflow-hidden text-left flex flex-col gap-3">
               {breakdown.grammarAnatomy && breakdown.grammarAnatomy.length > 0 ? (
                 <GrammarBrackets
                   blocks={breakdown.grammarAnatomy}

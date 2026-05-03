@@ -105,9 +105,9 @@ export function StepCard({ breakdown, currentStepIdx }: StepCardProps) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.18, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h3 className="text-3xl md:text-5xl font-bold leading-tight tracking-tight mb-4 text-zinc-900">
+          <div className="mb-4">
             <HighlightedSentence segments={highlightedSentence} grammarBlocks={step.grammarBlocks} />
-          </h3>
+          </div>
           <div className="flex items-center justify-center gap-2">
             <p className="text-xl font-medium text-ink-muted">{step.chinese}</p>
             <button

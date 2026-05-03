@@ -11,7 +11,12 @@ const VALID_ROLES = new Set([
   "other",
 ]);
 import { readOpenAIStream } from "./openaiStream.js";
-import { buildBreakdownPrompt, buildComplexSentencePrompt } from "./prompt.js";
+import { buildBreakdownSystemPrompt, buildBreakdownUserPrompt, buildComplexSentencePrompt } from "./prompt.js";
+
+interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
 
 interface WebAI2APIChatResponse {
   choices?: Array<{
@@ -140,9 +145,13 @@ function isStringArray(value: unknown): value is string[] {
 }
 
 export async function generateBreakdownOnServer(sentence: string): Promise<SentenceBreakdown> {
-  const content = await requestChatCompletion(buildBreakdownPrompt(sentence), {
-    responseFormat: true,
-  });
+  const content = await requestChatCompletion(
+    [
+      { role: "system", content: buildBreakdownSystemPrompt() },
+      { role: "user", content: buildBreakdownUserPrompt(sentence) },
+    ],
+    { responseFormat: true },
+  );
 
   return parseAndAssertBreakdown(content);
 }
@@ -153,9 +162,13 @@ export async function streamBreakdownOnServer(
 ): Promise<SentenceBreakdown> {
   let content = "";
 
-  for await (const chunk of requestChatCompletionStream(buildBreakdownPrompt(sentence), {
-    responseFormat: true,
-  })) {
+  for await (const chunk of requestChatCompletionStream(
+    [
+      { role: "system", content: buildBreakdownSystemPrompt() },
+      { role: "user", content: buildBreakdownUserPrompt(sentence) },
+    ],
+    { responseFormat: true },
+  )) {
     content += chunk;
     onChunk?.(chunk);
   }
@@ -164,9 +177,10 @@ export async function streamBreakdownOnServer(
 }
 
 export async function generateComplexSentenceOnServer(): Promise<string> {
-  const content = await requestChatCompletion(buildComplexSentencePrompt(), {
-    responseFormat: false,
-  });
+  const content = await requestChatCompletion(
+    [{ role: "user", content: buildComplexSentencePrompt() }],
+    { responseFormat: false },
+  );
 
   const sentence = normalizeGeneratedSentence(content);
   validateGeneratedSentence(sentence);
@@ -177,9 +191,10 @@ export async function generateComplexSentenceOnServer(): Promise<string> {
 export async function* streamComplexSentenceOnServer(): AsyncGenerator<string, string> {
   let sentence = "";
 
-  for await (const chunk of requestChatCompletionStream(buildComplexSentencePrompt(), {
-    responseFormat: false,
-  })) {
+  for await (const chunk of requestChatCompletionStream(
+    [{ role: "user", content: buildComplexSentencePrompt() }],
+    { responseFormat: false },
+  )) {
     sentence += chunk;
     yield chunk;
   }
@@ -190,7 +205,7 @@ export async function* streamComplexSentenceOnServer(): AsyncGenerator<string, s
   return normalizedSentence;
 }
 
-async function requestChatCompletion(prompt: string, options: { responseFormat: boolean }): Promise<string> {
+async function requestChatCompletion(messages: ChatMessage[], options: { responseFormat: boolean }): Promise<string> {
   const baseUrl = (process.env.WEBAI2API_BASE_URL || "http://47.238.156.250:3000").replace(/\/$/, "");
   const apiKey = process.env.WEBAI2API_API_KEY || "";
   const modelName = process.env.WEBAI2API_MODEL || "gemini-2.0-flash";
@@ -207,12 +222,7 @@ async function requestChatCompletion(prompt: string, options: { responseFormat: 
     },
     body: JSON.stringify({
       model: modelName,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+      messages,
       ...(options.responseFormat ? { response_format: { type: "json_object" } } : {}),
       stream: false,
     }),
@@ -232,7 +242,7 @@ async function requestChatCompletion(prompt: string, options: { responseFormat: 
   return content;
 }
 
-async function* requestChatCompletionStream(prompt: string, options: { responseFormat: boolean }): AsyncGenerator<string> {
+async function* requestChatCompletionStream(messages: ChatMessage[], options: { responseFormat: boolean }): AsyncGenerator<string> {
   const baseUrl = (process.env.WEBAI2API_BASE_URL || "http://47.238.156.250:3000").replace(/\/$/, "");
   const apiKey = process.env.WEBAI2API_API_KEY || "";
   const modelName = process.env.WEBAI2API_MODEL || "gemini-2.0-flash";
@@ -249,12 +259,7 @@ async function* requestChatCompletionStream(prompt: string, options: { responseF
     },
     body: JSON.stringify({
       model: modelName,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+      messages,
       ...(options.responseFormat ? { response_format: { type: "json_object" } } : {}),
       stream: true,
     }),

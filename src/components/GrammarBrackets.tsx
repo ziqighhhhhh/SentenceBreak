@@ -21,22 +21,22 @@ interface GrammarBracketsProps {
 }
 
 const WORD_SIZE: Record<string, string> = { normal: 'text-xl md:text-2xl', compact: 'text-sm' };
-const GAP: Record<string, string> = { normal: 'gap-x-4 md:gap-x-5', compact: 'gap-x-2' };
+const GAP: Record<string, string> = { normal: 'gap-x-4 md:gap-x-5 gap-y-2', compact: 'gap-x-2 gap-y-1' };
 const LABEL_GAP: Record<string, string> = { normal: 'gap-1', compact: 'gap-0.5' };
 const DESCENDER_PB: Record<string, string> = { normal: 'pb-1', compact: 'pb-0.5' };
 const BRACKET_GAP: Record<string, string> = { normal: 'gap-0.5', compact: 'gap-px' };
 
 export function GrammarBrackets({ blocks, segments, compact, inverted }: GrammarBracketsProps) {
   const size = compact ? 'compact' : 'normal';
-  const isNewSet = computeNewSet(segments);
+  const newWordSet = computeNewSet(segments);
 
   return (
-    <div className={`flex flex-wrap ${GAP[size]} justify-center w-full min-w-0`}>
+    <div className={`flex flex-wrap ${GAP[size]} justify-center w-full min-w-0 overflow-hidden`}>
       {blocks.map((block, i) => (
         <GrammarBlockItem
           key={i}
           block={block}
-          hasHighlight={blockHasHighlight(block, isNewSet)}
+          newWordSet={newWordSet}
           size={size}
           inverted={inverted}
         />
@@ -47,7 +47,7 @@ export function GrammarBrackets({ blocks, segments, compact, inverted }: Grammar
 
 interface GrammarBlockItemProps {
   block: GrammarBlock;
-  hasHighlight: boolean;
+  newWordSet: Set<string>;
   size: 'normal' | 'compact';
   inverted?: boolean;
 }
@@ -56,14 +56,16 @@ function isPunctuationOnly(text: string): boolean {
   return !/[a-zA-Z0-9\u4e00-\u9fff\u3000-\u9fff]/.test(text.trim());
 }
 
-function GrammarBlockItem({ block, hasHighlight, size, inverted }: GrammarBlockItemProps) {
-  const textColor = inverted ? 'text-white' : hasHighlight ? 'text-primary' : 'text-zinc-900';
+function GrammarBlockItem({ block, newWordSet, size, inverted }: GrammarBlockItemProps) {
+  const hasHighlight = block.text.toLowerCase().split(/\s+/).filter(Boolean).some((t) => newWordSet.has(t));
+  const baseWordColor = inverted ? 'text-white' : 'text-zinc-900';
+  const newWordColor = inverted ? 'text-white' : 'text-primary';
   const bracketColor = inverted ? 'rgba(255,255,255,0.7)' : undefined;
   const labelColor = inverted ? 'rgba(255,255,255,0.9)' : undefined;
 
   if (isPunctuationOnly(block.text)) {
     return (
-      <span className={`font-bold whitespace-nowrap px-1 ${WORD_SIZE[size]} leading-none ${inverted ? 'text-white' : 'text-zinc-900'}`}>
+      <span className={`font-bold px-1 ${WORD_SIZE[size]} leading-none ${inverted ? 'text-white' : 'text-zinc-900'}`}>
         {block.text}
       </span>
     );
@@ -76,10 +78,14 @@ function GrammarBlockItem({ block, hasHighlight, size, inverted }: GrammarBlockI
   const bc = bracketColor ?? (hasHighlight ? 'var(--color-primary)' : c.color);
   const lc = labelColor ?? (hasHighlight ? 'var(--color-primary)' : c.color);
 
+  const words = block.text.split(/\s+/).filter(Boolean);
+
   return (
     <span className="inline-flex flex-col items-center min-w-0">
-      <span className={`font-bold whitespace-nowrap px-1 ${WORD_SIZE[size]} ${DESCENDER_PB[size]} leading-none ${textColor}`}>
-        {block.text}
+      <span className={`font-bold px-1 max-w-full ${WORD_SIZE[size]} ${DESCENDER_PB[size]} leading-none`} style={{ overflowWrap: 'anywhere' }}>
+        {words.map((word, i) => (
+          <span key={i} className={newWordSet.has(word.toLowerCase()) ? newWordColor : baseWordColor}>{word}{i < words.length - 1 ? ' ' : ''}</span>
+        ))}
       </span>
 
       <span className={`flex flex-col items-center w-full ${LABEL_GAP[size]}`}>
@@ -120,8 +126,4 @@ function computeNewSet(segments: HighlightSegment[]): Set<string> {
     }
   }
   return s;
-}
-
-function blockHasHighlight(block: GrammarBlock, set: Set<string>): boolean {
-  return block.text.toLowerCase().split(/\s+/).filter(Boolean).some((t) => set.has(t));
 }
