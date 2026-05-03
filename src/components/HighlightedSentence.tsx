@@ -28,26 +28,39 @@ interface HighlightedSentenceProps {
   grammarBlocks?: GrammarBlock[];
 }
 
-interface MergedSegment {
-  text: string;
-  highlighted: boolean;
-  role?: string;
-}
+const tokenRe = /\s+|[\w'-]+|[^\s\w]/g;
 
 export function HighlightedSentence({ segments, grammarBlocks }: HighlightedSentenceProps) {
   if (!grammarBlocks || grammarBlocks.length === 0) {
-    return renderWithFallback(segments);
+    return <RenderSegments segments={segments} />;
   }
 
-  const merged = mergeSegments(segments, grammarBlocks);
+  const highlightedTokens = buildHighlightedTokenSet(segments);
 
   return (
     <>
-      {merged.map((seg, idx) => {
-        const cls = buildClass(seg);
-        if (!cls) return <span key={idx}>{seg.text}</span>;
+      {grammarBlocks.map((block, idx) => {
+        const hasNew = blockContainsHighlightedToken(block, highlightedTokens);
         return (
-          <span key={idx} className={cls}>
+          <span
+            key={idx}
+            className={getClasses(hasNew, block.role)}
+          >
+            {block.text}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+function RenderSegments({ segments }: { segments: HighlightSegment[] }) {
+  return (
+    <>
+      {segments.map((seg, idx) => {
+        if (!seg.highlighted) return <span key={idx}>{seg.text}</span>;
+        return (
+          <span key={idx} className="rounded px-0.5 underline underline-offset-2">
             {seg.text}
           </span>
         );
@@ -56,109 +69,34 @@ export function HighlightedSentence({ segments, grammarBlocks }: HighlightedSent
   );
 }
 
-function mergeSegments(segments: HighlightSegment[], blocks: GrammarBlock[]): MergedSegment[] {
-  const roleByToken = new Map<string, string>();
-  for (const block of blocks) {
-    const t = block.text.trim();
-    if (t) {
-      roleByToken.set(lower(t), block.role);
-    }
-  }
-
-  let blockIdx = 0;
-  let currentBlockText = normalizeLower(blocks[0]?.text ?? '');
-  let consumed = 0;
-
-  const result: MergedSegment[] = [];
-
+function buildHighlightedTokenSet(segments: HighlightSegment[]): Set<string> {
+  const set = new Set<string>();
   for (const seg of segments) {
-    const tokens = extractTokens(seg.text);
-
-    for (const token of tokens) {
-      const clean = lower(token.text);
-
-      let matched = false;
-
-      if (consumed < currentBlockText.length) {
-        const remaining = currentBlockText.slice(consumed);
-        if (remaining.startsWith(clean) || clean.startsWith(remaining.slice(0, clean.length))) {
-          const advanceStart = matchLength(remaining, clean);
-          consumed += advanceStart;
-
-          result.push({
-            text: token.text,
-            highlighted: seg.highlighted,
-            role: blocks[blockIdx]?.role ?? 'other',
-          });
-          matched = true;
-        }
-      }
-
-      if (!matched) {
-        result.push({ ...token, highlighted: seg.highlighted, role: undefined });
-      }
-
-      if (consumed >= currentBlockText.length) {
-        blockIdx++;
-        currentBlockText = normalizeLower(blocks[blockIdx]?.text ?? '');
-        consumed = 0;
-      }
+    if (!seg.highlighted) continue;
+    const tokens = seg.text.match(tokenRe) ?? [];
+    for (const t of tokens) {
+      const n = t.trim().toLowerCase();
+      if (n.length > 0) set.add(n);
     }
   }
-
-  return result;
+  return set;
 }
 
-function extractTokens(text: string) { 
-  const out: { text: string; originalIndex: number }[] = [];
-  let remaining = text;
-  let index = 0;
-  
-  const pattern = /\s+|[\w'-]+|[^\s\w]/g;
-  let match;
-  while ((match = pattern.exec(text)) !== null) {
-    out.push({ text: match[0], originalIndex: match.index });
+function blockContainsHighlightedToken(
+  block: GrammarBlock,
+  highlightedTokens: Set<string>,
+): boolean {
+  const tokens = block.text.match(tokenRe) ?? [];
+  for (const t of tokens) {
+    const n = t.trim().toLowerCase();
+    if (n.length > 0 && highlightedTokens.has(n)) return true;
   }
-  
-  return out;
+  return false;
 }
 
-function buildClass(seg: MergedSegment): string | undefined {
-  if (seg.highlighted && seg.role) {
-    return `${ROLE_BG[seg.role] ?? ROLE_BG.other} ${ROLE_RING[seg.role] ?? ROLE_RING.other} ring-1 rounded px-0.5 underline underline-offset-2`;
+function getClasses(highlighted: boolean, role: string): string {
+  if (highlighted) {
+    return `${ROLE_BG[role] ?? ROLE_BG.other} ${ROLE_RING[role] ?? ROLE_RING.other} ring-1 rounded px-0.5 underline underline-offset-2`;
   }
-  if (seg.highlighted) {
-    return 'rounded px-0.5 underline underline-offset-2';
-  }
-  if (seg.role) {
-    return `${ROLE_BG[seg.role] ?? ROLE_BG.other} ${ROLE_RING[seg.role] ?? ROLE_RING.other} ring-1 rounded px-0.5`;
-  }
-  return undefined;
-}
-
-function renderWithFallback(segments: HighlightSegment[]) {
-  return (
-    <>
-      {segments.map((segment, index) => {
-        if (!segment.highlighted) return <span key={index}>{segment.text}</span>;
-        return (
-          <span key={index} className="rounded px-0.5 underline underline-offset-2">
-            {segment.text}
-          </span>
-        );
-      })}
-    </>
-  );
-}
-
-function normalizeLower(v: string): string {
-  return v.replace(/\s+/g, ' ').trim().toLowerCase();
-}
-
-function lower(v: string): string {
-  return v.replace(/\s+/g, ' ').trim().toLowerCase();
-}
-
-function matchLength(a: string, b: string): number {
-  return Math.max(a.length, b.length);
+  return `${ROLE_BG[role] ?? ROLE_BG.other} ${ROLE_RING[role] ?? ROLE_RING.other} ring-1 rounded px-0.5`;
 }
