@@ -5,8 +5,20 @@ export function buildBreakdownPrompt(sentence: string): string {
     TARGET SENTENCE:
     "${sentence}"
 
-    GOAL:
+    GOAL AND GRAMMAR BLOCKS PER STEP
     Turn the target sentence into a progressive card sequence for Chinese learners. The learner should first see the destination sentence, then a very simple base sentence, then rebuild the original sentence one learnable change at a time. Each step may also include focused vocabulary or phrase insights that help the learner understand external-reading style English.
+
+    In addition, for EVERY step's english sentence, you must provide a "grammarBlocks" array that partitions the sentence into contiguous syntax chunks, each annotated with its grammatical role. This applies to all steps including the base sentence. The combined text of all grammarBlocks in a step must closely match that step's english sentence.
+
+    For each grammar block:
+    - "text": the exact text span
+    - "role": one of "subject", "predicate", "object", "modifier", "adverbial", "complement", "connector", "other"
+    - "roleLabel": a concise Chinese label, e.g. "主语", "谓语", "宾语", "定语", "状语", "补语", "连接词", "其它"
+
+    Rules for grammar blocks:
+    - Cover all meaningful words in the sentence, not just the main structure.
+    - Use "other" for punctuation or text that does not fit any other role.
+    - Keep blocks as contiguous spans of the sentence. Do not overlap or leave gaps.
 
     CORE WORKFLOW:
     1. Identify the final target sentence and infer a short source label when possible, such as "BBC 长难句", "经济学人长难句", "新闻长难句", "学术长难句", or "英语长难句".
@@ -99,6 +111,13 @@ export function buildBreakdownPrompt(sentence: string): string {
           "chinese": "string",
           "label": "string",
           "explanation": "string",
+          "grammarBlocks": [
+            {
+              "text": "string",
+              "role": "subject | predicate | object | modifier | adverbial | complement | connector | other",
+              "roleLabel": "string"
+            }
+          ],
           "vocabularyInsights": [
             {
               "text": "string",

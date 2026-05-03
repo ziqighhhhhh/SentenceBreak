@@ -22,6 +22,7 @@ export interface BreakdownStep {
   label: string;
   explanation: string;
   vocabularyInsights?: VocabularyInsight[];
+  grammarBlocks?: GrammarBlock[];
 }
 
 export interface GrammarBlock {

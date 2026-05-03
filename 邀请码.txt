@@ -1,0 +1,6 @@
+  ### 后续建议
+
+  - 在浏览器打开 http://localhost:3001 做一次完整人工验收。
+  - 用邀请码 alpha2026 或 beta2026 测试登录。
+  - 真机验证：生成句子、分析、查看词汇洞察、进入 My Learning、修改掌握状态。
+  - 下一步适合补一条 Playwright E2E 覆盖登录到 My Learning 的主流程。

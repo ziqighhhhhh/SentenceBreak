@@ -74,7 +74,7 @@ export function SummaryView({
               <div className="min-w-0 text-left flex flex-col gap-3">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-lg font-bold text-zinc-900 leading-snug">
-                    <HighlightedSentence segments={highlightedSentence} />
+                    <HighlightedSentence segments={highlightedSentence} grammarBlocks={step.grammarBlocks} />
                   </p>
                   <button
                     type="button"

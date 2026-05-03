@@ -1,0 +1,36 @@
+  以后更新网站
+
+  cd /var/www/SentenceBreak
+  sudo git pull origin main
+  sudo npm ci
+  sudo npm run build
+  sudo pm2 restart sentencebreak
+
+# WebAI2API: Required for OpenAI-compatible chat completion calls.
+WEBAI2API_BASE_URL="http://47.238.156.250:3000"
+WEBAI2API_API_KEY="sk-EnglishLearning"
+WEBAI2API_MODEL="gemini-3.1-flash"
+
+# Server runtime settings.
+PORT="8787"
+ADMIN_RATE_LIMIT_PER_MINUTE="120"
+
+# Beta learning records.
+DATABASE_URL="file:./data/sentencebreak.db"
+BETA_INVITE_CODES="alpha2026,beta2026,test001"
+
+# Vite dev proxy target. Production traffic is served by server.ts.
+API_PROXY_TARGET="http://localhost:8787"
+
+
+  cat > .env <<'EOF'
+  WEBAI2API_BASE_URL="http://47.238.156.250:3000"
+  WEBAI2API_API_KEY="xx"
+  WEBAI2API_MODEL="gemini-3.1-flash"
+  PORT="8787"
+  ADMIN_RATE_LIMIT_PER_MINUTE="120"
+  TRUST_PROXY="1"
+  DATABASE_URL="file:./data/sentencebreak.db"
+  BETA_INVITE_CODES="alpha2026,beta2026"
+  API_PROXY_TARGET="http://localhost:8787"
+  EOF

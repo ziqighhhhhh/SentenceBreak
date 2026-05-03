@@ -85,6 +85,23 @@ function assertBreakdown(value: SentenceBreakdown): SentenceBreakdown {
         }
       }
     }
+
+    if (step.grammarBlocks !== undefined) {
+      if (!Array.isArray(step.grammarBlocks) || step.grammarBlocks.length === 0) {
+        throw new Error("AI response included invalid grammar blocks.");
+      }
+
+      for (const block of step.grammarBlocks) {
+        if (
+          typeof block?.text !== "string" ||
+          typeof block?.role !== "string" ||
+          typeof block?.roleLabel !== "string" ||
+          !VALID_ROLES.has(block.role)
+        ) {
+          throw new Error("AI response included an invalid grammar block.");
+        }
+      }
+    }
   }
 
   if (value.grammarAnatomy !== undefined && Array.isArray(value.grammarAnatomy)) {
