@@ -1,5 +1,7 @@
+import { prepareWithSegments, measureNaturalWidth } from '@chenglou/pretext';
 import type { GrammarBlock, GrammarRole } from '../types';
 import type { HighlightSegment } from '../utils/highlightDiff';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const ROLE_META: Record<GrammarRole, { border: string; color: string; label: string }> = {
   subject:    { border: 'border-blue-500',  color: '#3b82f6', label: '主' },
@@ -19,136 +21,141 @@ interface GrammarBracketsProps {
   compact?: boolean;
 }
 
+const GAP_PX: Record<'normal' | 'compact', number> = { normal: 12, compact: 4 };
+const FONT_STR: Record<'normal' | 'compact', string> = { normal: '24px Inter', compact: '14px Inter' };
+const WORD_SIZE: Record<'normal' | 'compact', string> = { normal: 'text-xl md:text-2xl', compact: 'text-sm' };
+const LABEL_SIZE: Record<'normal' | 'compact', string> = { normal: 'text-xs', compact: 'text-[10px]' };
+const BRACKET_W: Record<'normal' | 'compact', string> = { normal: 'border-l-[2.5px] border-b-[2.5px] border-r-[2.5px] rounded-b-md', compact: 'border-l-[1.5px] border-b-[1.5px] border-r-[1.5px] rounded-b-sm' };
+const LABEL_OFF_PX: Record<'normal' | 'compact', number> = { normal: 12, compact: 4 };
+
 /**
- * CSS Grid layout where row-1 = words (one per column), row-2 = brackets.
- * Each bracket uses gridColumn: "start+1 / end+2" so it spans the exact
- * columns of the words above.  Because grid columns are auto-sized, the
- * bracket box perfectly matches the real word widths + gaps.
+ * Sentence grammar annotation with automatic line wrapping via pretext.
+ *
+ * Each grammar block is an atomic unit that never splits across lines.
+ * Blocks flow like words in a paragraph — when the line runs out of width,
+ * the next block starts a new line.
  */
 export function GrammarBrackets({ blocks, segments, sentenceText, compact }: GrammarBracketsProps) {
-  const words = sentenceText.split(/\s+/).filter(Boolean);
-  const wordCount = words.length;
-  const spans = computeSpans(blocks, sentenceText);
-  const newSet = getNewSet(segments);
-  const s = compact ? 'compact' : 'normal';
-  const isC = s === 'compact';
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [cw, setCw] = useState(0);
+  const size = compact ? 'compact' : 'normal';
 
-  if (!blocks.length) return <SegmentOnly segments={segments} size={s} />;
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    setCw(el.clientWidth);
+    const ro = new ResizeObserver(() => setCw(el.clientWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const blockWidths = useMemo(() =>
+    blocks.map((b) => {
+      const t = b.text.trim();
+      return t ? measureNaturalWidth(prepareWithSegments(t, FONT_STR[size], { whiteSpace: 'pre-wrap' })) : 0;
+    }),
+    [blocks, size],
+  );
+
+  /* Greedy first-fit line packing */
+  const packedLines = useMemo(() => {
+    if (!blocks.length || cw <= 0) return [];
+    const gap = GAP_PX[size];
+    const lines: number[][] = [];
+    let cur: number[] = [];
+    let w = 0;
+    for (let i = 0; i < blocks.length; i++) {
+      const needed = cur.length === 0 ? blockWidths[i] : w + gap + blockWidths[i];
+      if (needed > cw && cur.length > 0) {
+        lines.push(cur);
+        cur = [i];
+        w = blockWidths[i];
+      } else {
+        cur.push(i);
+        w = needed;
+      }
+    }
+    if (cur.length) lines.push(cur);
+    return lines;
+  }, [blocks, blockWidths, cw, size]);
+
+  const hlSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const seg of segments) {
+      if (!seg.highlighted) continue;
+      for (const t of seg.text.split(/\s+/).filter(Boolean)) s.add(t.toLowerCase());
+    }
+    return s;
+  }, [segments]);
+
+  const blockIsNew = useMemo(
+    () => blocks.map((b) => b.text.toLowerCase().split(/\s+/).filter(Boolean).some((w) => hlSet.has(w))),
+    [blocks, hlSet],
+  );
 
   return (
-    <div className="flex justify-center overflow-x-auto">
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${wordCount}, auto)`, columnGap: isC ? '4px' : '12px' }}>
-        {/* Row 1: words */}
-        {words.map((w, i) => {
-          const isNew = newSet.has(w.toLowerCase());
-          return (
-            <span
-              key={i}
-              className={`font-bold whitespace-nowrap transition-colors ${isC ? 'text-sm' : 'text-xl md:text-2xl'} ${isNew ? 'text-primary border-b-2 border-blue-400/70' : 'text-zinc-900'}`}
-              style={{ padding: '0 0.375rem 2px' }}
-            >
-              {w}
-            </span>
-          );
-        })}
+    <div ref={containerRef} className="w-full min-w-0">
+      {!blocks.length ? (
+        /* No grammar blocks — show segments with underline highlights */
+        <div className="flex flex-wrap gap-x-3 md:gap-x-4 justify-center pt-2 pb-4">
+          {segments.map((seg, i) => (
+            <span key={i} className={`${WORD_SIZE[size]} font-bold px-1 ${seg.highlighted ? 'text-primary border-b-2 border-blue-400/70' : 'text-zinc-900'}`}>{seg.text}</span>
+          ))}
+        </div>
+      ) : packedLines.length ? (
+        /* pretext computed lines — render each as a flex row */
+        packedLines.map((line, li) => (
+          <div key={li} className="flex flex-wrap gap-x-3 md:gap-x-4 justify-center mb-2">
+            {line.map((bi) => (
+              <GrammarBlockItem key={bi} block={blocks[bi]} hasHighlight={blockIsNew[bi]} size={size} />
+            ))}
+          </div>
+        ))
+      ) : (
+        /* First render: container width not known yet, show all blocks with overflow */
+        <div className="flex gap-x-3 md:gap-x-4 pt-2 pb-4 overflow-x-auto">
+          {blocks.map((b, i) => <GrammarBlockItem key={i} block={b} hasHighlight={blockIsNew[i]} size={size} />)}
+        </div>
+      )}
+    </div>
+  );
+}
 
-        {/* Row 2: bracket boxes */}
-        {blocks.map((block, bi) => {
-          const [start, end] = spans[bi];
-          if (start < 0 || end < start || start >= wordCount) return null;
-          const config = ROLE_META[block.role] ?? ROLE_META.other;
-          const isNew = blocksInSpan(start, end, newSet, words);
-          const bw = isC ? '1.5px' : '2.5px';
-          const labelOffY = isC ? 4 : 12;
-
-          return (
-            <div
-              key={bi}
-              style={{
-                gridColumn: `${start + 1} / ${end + 2}`,
-                gridRow: 2,
-                height: '16px',
-                position: 'relative',
-              }}
-            >
-              {/* Bracket border */}
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: '0',
-                  borderLeft: `${bw} solid ${isNew ? 'var(--color-primary)' : config.color}`,
-                  borderBottom: `${bw} solid ${isNew ? 'var(--color-primary)' : config.color}`,
-                  borderRight: `${bw} solid ${isNew ? 'var(--color-primary)' : config.color}`,
-                  borderTop: 'none',
-                  borderBottomLeftRadius: isC ? '3px' : '6px',
-                  borderBottomRightRadius: isC ? '3px' : '6px',
-                }}
-              />
-              {/* Label centred on the bottom border */}
-              <span
-                style={{
-                  position: 'absolute',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  bottom: 0,
-                  marginTop: `${labelOffY}px`,
-                  fontWeight: 800,
-                  fontSize: isC ? '10px' : '12px',
-                  letterSpacing: '0.1em',
-                  color: isNew ? 'var(--color-primary)' : config.color,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {config.label}
-              </span>
-            </div>
-          );
-        })}
+/** Single grammar block: words on top, L-bracket + label below */
+function GrammarBlockItem({
+  block,
+  hasHighlight,
+  size,
+}: {
+  block: GrammarBlock;
+  hasHighlight: boolean;
+  size: 'normal' | 'compact';
+}) {
+  const c = ROLE_META[block.role] ?? ROLE_META.other;
+  return (
+    <div className="relative inline-flex flex-col items-center">
+      {/* Text */}
+      <span className={`font-bold whitespace-nowrap px-0.5 ${WORD_SIZE[size]} ${hasHighlight ? 'text-primary' : 'text-zinc-900'} transition-colors`}>
+        {block.text}
+      </span>
+      {/* Bracket strip */}
+      <div className="h-6 flex items-start" style={{ marginTop: '2px' }}>
+        <div className={`relative flex items-stretch ${BRACKET_W[size]} ${c.border}`}>
+          {/* Invisible placeholder to set width matching the text above */}
+          <span className={`invisible whitespace-nowrap ${WORD_SIZE[size]} px-0.5`}>{block.text}</span>
+          {/* Label floating below bracket */}
+          <span
+            className={`absolute left-1/2 -translate-x-1/2 font-extrabold tracking-wider select-none whitespace-nowrap ${LABEL_SIZE[size]} ${hasHighlight ? 'text-primary' : ''}`}
+            style={{
+              color: hasHighlight ? undefined : c.color,
+              top: '100%',
+              marginTop: `${LABEL_OFF_PX[size]}px`,
+            }}
+          >
+            {c.label}
+          </span>
+        </div>
       </div>
     </div>
   );
-}
-
-function SegmentOnly({ segments, size }: { segments: HighlightSegment[]; size: string }) {
-  return (
-    <div className={`flex ${size === 'compact' ? 'gap-x-1' : 'gap-x-3 md:gap-x-4'} justify-center pb-4 pt-2`}>
-      {segments.map((seg, i) => (
-        <span key={i} className={`font-bold px-1.5 ${seg.highlighted ? 'text-primary border-b-2 border-blue-400/70' : 'text-zinc-900'} ${size === 'compact' ? 'text-sm' : 'text-xl md:text-2xl'}`}>
-          {seg.text}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function computeSpans(blocks: GrammarBlock[], text: string): [number, number][] {
-  const words = text.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.replace(/[^a-z0-9'\u4e00-\u9fff-]/g, ''));
-  const line = words.join(' ');
-  return blocks.map((block) => {
-    const bc = block.text.toLowerCase().trim().replace(/[,.;:!?'"()]/g, '');
-    const bw = bc.split(/\s+/).filter(Boolean).map((w) => w.replace(/[^a-z0-9'\u4e00-\u9fff-]/g, ''));
-    if (!bw.length) return [0, 0];
-    const bs = bw.join(' ');
-    const p = line.indexOf(bs);
-    if (p === -1) {
-      for (let i = 0; i < words.length; i++) {
-        if (words[i].startsWith(bw[0])) return [i, Math.min(i + bw.length - 1, words.length - 1)];
-      }
-      return [0, Math.min(bw.length - 1, words.length - 1)];
-    }
-    const before = line.slice(0, p).trim();
-    const start = before === '' ? 0 : before.split(/\s+/).filter(Boolean).length;
-    return [start, Math.min(start + bw.length - 1, words.length - 1)];
-  });
-}
-
-function getNewSet(segments: HighlightSegment[]): Set<string> {
-  const s = new Set<string>();
-  for (const seg of segments) { if (!seg.highlighted) continue; for (const t of seg.text.split(/\s+/).filter(Boolean)) s.add(t.toLowerCase()); }
-  return s;
-}
-
-function blocksInSpan(start: number, end: number, set: Set<string>, words: string[]): boolean {
-  for (let i = Math.max(0, start); i <= Math.min(end, words.length - 1); i++) { if (set.has(words[i].toLowerCase())) return true; }
-  return false;
 }
