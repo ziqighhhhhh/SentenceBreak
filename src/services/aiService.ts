@@ -74,6 +74,10 @@ export async function generateComplexSentenceStream(onToken: StreamEventHandler)
           throw new Error(parsed.error);
         }
       }
+
+      if (finalSentence) {
+        break;
+      }
     }
   } finally {
     reader.releaseLock();
@@ -149,6 +153,10 @@ export async function generateBreakdownStream(sentence: string, onProgress: Prog
         if (parsed.type === "error") {
           throw new Error(parsed.error);
         }
+      }
+
+      if (finalBreakdown) {
+        break;
       }
     }
   } finally {

@@ -115,6 +115,7 @@ app.post("/api/breakdown/stream", apiRateLimit, async (req: Request, res: Respon
   res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders?.();
 
   try {
@@ -150,6 +151,7 @@ app.post("/api/sentence/stream", apiRateLimit, async (_req: Request, res: Respon
   res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders?.();
 
   try {
